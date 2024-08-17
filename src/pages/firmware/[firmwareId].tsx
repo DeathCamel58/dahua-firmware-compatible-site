@@ -40,7 +40,7 @@ const FirmwarePage = ({firmwareId, firmwareCompatible, fileURL}: Props) => {
 };
 
 export const getStaticPaths = async () => {
-  const firmwares = getFirmwares();
+  const firmwares = await getFirmwares();
   const paths = Object.keys(firmwares).map(firmwareId => ({
     params: {firmwareId},
   }));
