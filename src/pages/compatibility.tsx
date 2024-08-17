@@ -20,10 +20,10 @@ const Compatibility = () => {
   let data = [["Firmware", "Compatible Devices"]]
   for (let key in firmwares) {
     let devices_string = ''
-    const link = "<a href=\"/firmware/" + key + "\" class=\"text-blue-600\">"+ key + "</a>"
+    const link = "<a href=\"/firmware/" + encodeURIComponent(key) + "\" class=\"text-blue-600\">"+ key + "</a>"
 
     for (const device of firmwares[key].compatible) {
-      devices_string += "<p><a href=\"/camera/" + device + "\" class=\"text-blue-600\"><code>" + device + "</code></a></p>"
+      devices_string += "<p><a href=\"/camera/" + encodeURIComponent(device) + "\" class=\"text-blue-600\"><code>" + device + "</code></a></p>"
     }
 
     let row = [link, devices_string]
