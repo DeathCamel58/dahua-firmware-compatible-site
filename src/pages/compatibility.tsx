@@ -1,9 +1,19 @@
-import {getCameras, getFirmwares} from '@/lib/data';
+import {getFirmwares} from '@/lib/data';
 import Table from "@/components/Table";
+import {useEffect, useState} from "react";
+import {Firmware} from "@/lib/Firmware";
 
 const Compatibility = () => {
-  const cameras = getCameras();
-  const firmwares = getFirmwares();
+  const [firmwares, setFirmwares] = useState<Record<string, Firmware>>({});
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const fetchedFirmwares = await getFirmwares();
+      setFirmwares(fetchedFirmwares);
+    };
+
+    fetchData();
+  }, []);
 
   // TODO: Add searching values
 

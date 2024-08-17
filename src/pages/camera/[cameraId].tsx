@@ -1,6 +1,5 @@
-import {getCameras, getFirmwares} from '@/lib/data';
+import {getFirmwares} from '@/lib/data';
 import Link from "next/link";
-import firmwareId from "@/pages/firmware/[firmwareId]";
 
 type Props = {
   cameraId: string;
@@ -33,7 +32,7 @@ const CameraPage = ({ cameraId, firmwaresCompatible }: Props) => {
 };
 
 export const getStaticPaths = async () => {
-  const firmwares = getFirmwares();
+  const firmwares = await getFirmwares();
 
   let allcameras = []
   for (const firmware in firmwares) {
@@ -44,8 +43,8 @@ export const getStaticPaths = async () => {
     }
   }
 
-  const paths = Object.keys(allcameras).map((value, index) => ({
-    params: { cameraId: allcameras[index] },
+  const paths = Object.keys(allcameras).map((value, cameraIndex) => ({
+    params: { cameraId: allcameras[cameraIndex] },
   }));
 
   return { paths, fallback: 'blocking' };
@@ -53,7 +52,7 @@ export const getStaticPaths = async () => {
 
 export const getStaticProps = async (context: { params: { cameraId: string; }; }) => {
   const cameraId = context.params?.cameraId as string;
-  const firmwares = getFirmwares();
+  const firmwares = await getFirmwares();
 
   let firmwaresCompatible: string[] = [];
   for (const firmware in firmwares) {

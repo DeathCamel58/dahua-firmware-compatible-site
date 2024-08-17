@@ -50,11 +50,11 @@ export const getStaticPaths = async () => {
 
 export const getStaticProps = async (context: { params: { firmwareId: string; }; }) => {
   const firmwareId = context.params?.firmwareId as string;
-  const firmwares = getFirmwares();
+  const firmwares = await getFirmwares();
 
   const firmwareCompatible = firmwares[firmwareId].compatible;
 
-  const cameras = getCameras()
+  const cameras = await getCameras()
   let fileURL: string | null = null
   for (const cameraKey in cameras) {
     if (cameras[cameraKey].url.includes(firmwareId)) {
