@@ -37,17 +37,15 @@ export const getStaticPaths = async () => {
 
   let allcameras = []
   for (const firmware in firmwares) {
-    if ("camera_name" in firmwares[firmware]) {
-      for (let camera in firmwares['camera_name']) {
-        if (!(camera in allcameras)) {
-          allcameras.push({params: {cameraId: camera}})
-        }
+    for (let index in firmwares[firmware].compatible) {
+      if (!(firmwares[firmware].compatible[index] in allcameras)) {
+        allcameras.push(firmwares[firmware].compatible[index])
       }
     }
   }
 
-  const paths = Object.keys(firmwares).map(cameraId => ({
-    params: { cameraId },
+  const paths = Object.keys(allcameras).map((value, index) => ({
+    params: { cameraId: allcameras[index] },
   }));
 
   return { paths, fallback: 'blocking' };
