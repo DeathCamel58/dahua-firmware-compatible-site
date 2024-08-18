@@ -44,14 +44,14 @@ export const getStaticPaths = async () => {
   }
 
   const paths = Object.keys(allcameras).map((value, cameraIndex) => ({
-    params: { cameraId: allcameras[cameraIndex] },
+    params: { cameraId: encodeURIComponent(allcameras[cameraIndex]) },
   }));
 
   return { paths, fallback: 'blocking' };
 };
 
 export const getStaticProps = async (context: { params: { cameraId: string; }; }) => {
-  const cameraId = context.params?.cameraId as string;
+  const cameraId = decodeURIComponent(context.params?.cameraId) as string;
   const firmwares = await getFirmwares();
 
   let firmwaresCompatible: string[] = [];

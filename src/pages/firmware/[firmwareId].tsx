@@ -32,7 +32,7 @@ const FirmwarePage = ({firmwareId, firmwareCompatible, fileURL}: Props) => {
       <h3 className="font-bold mt-4 mb-1">Compatible Cameras</h3>
       {firmwareCompatible.map(value => (
         <p key={value}>
-          <Link href={"/camera/" + encodeURIComponent(value)} className="text-blue-600">{value}</Link>
+          <Link href={"/camera/" + encodeURIComponent(encodeURIComponent(value))} className="text-blue-600">{value}</Link>
         </p>
       ))}
     </div>

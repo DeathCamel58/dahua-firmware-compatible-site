@@ -23,7 +23,7 @@ const Compatibility = () => {
     const link = "<a href=\"/firmware/" + encodeURIComponent(key) + "\" class=\"text-blue-600\">"+ key + "</a>"
 
     for (const device of firmwares[key].compatible) {
-      devices_string += "<p><a href=\"/camera/" + encodeURIComponent(device) + "\" class=\"text-blue-600\"><code>" + device + "</code></a></p>"
+      devices_string += "<p><a href=\"/camera/" + encodeURIComponent(encodeURIComponent(device)) + "\" class=\"text-blue-600\"><code>" + device + "</code></a></p>"
     }
 
     let row = [link, devices_string]
