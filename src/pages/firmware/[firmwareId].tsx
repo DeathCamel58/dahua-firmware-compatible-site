@@ -25,7 +25,7 @@ const FirmwarePage = ({firmwareId, firmwareCompatible, fileURL}: Props) => {
       <h3 className="font-bold mt-4 mb-1">Download URL</h3>
       <p>{
         fileURL
-          ? <Link href={encodeURIComponent(fileURL)} className="text-blue-600">{fileURL}</Link>
+          ? <a href={fileURL} className="text-blue-600">{fileURL}</a>
           : <p>Missing</p>
       }</p>
 
