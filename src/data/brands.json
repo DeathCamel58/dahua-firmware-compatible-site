@@ -607,6 +607,20 @@
     "notes": "No official site: loryta.com is parked and was an unrelated clothing site in 2014. Loryta is the Amazon-only sister label of EmpireTech (same seller, Andy), so the EmpireTech logo could stand in."
   },
   {
+    "name": "Rhino",
+    "slug": "rhino",
+    "status": "reseller",
+    "statusNote": "Australian distributor (RhinoCo Technology); a vendor in the firmware data, not in IPVM's OEM list",
+    "website": "https://www.rhinoco.com.au",
+    "logo": "/logos/rhino.png",
+    "background": "light",
+    "width": 160,
+    "height": 100,
+    "source": "https://www.rhinoco.com.au/images/rhinoco-logo-160x100.png",
+    "quality": "official-raster",
+    "notes": "Only size the site offers (160x100); no vector or larger version found. Already transparent. Dark 'TECHNOLOGY' text needs a light background."
+  },
+  {
     "name": "2M CCTV",
     "slug": "2m-cctv",
     "status": "former",
