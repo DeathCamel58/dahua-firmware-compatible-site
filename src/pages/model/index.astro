@@ -2,7 +2,7 @@
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import Chips from "@/components/Chips.astro";
 import PageHeader from "@/components/PageHeader.astro";
-import { brandName, getData, paths } from "@/lib/data";
+import { getData, paths } from "@/lib/data";
 import { plural } from "@/lib/site";
 
 const data = await getData();
@@ -11,7 +11,7 @@ const data = await getData();
 const UNKNOWN = "Other sources";
 const groups = new Map<string, { name: string; href: string }[]>();
 for (const model of data.models.values()) {
-  const brands = model.publishers.length > 0 ? model.publishers.map(brandName) : [UNKNOWN];
+  const brands = model.publishers.length > 0 ? model.publishers : [UNKNOWN];
   for (const brand of new Set(brands)) {
     if (!groups.has(brand)) groups.set(brand, []);
     groups.get(brand)!.push({ name: model.name, href: paths.model(model) });
@@ -26,7 +26,7 @@ const anchor = (brand: string) => `brand-${brand.toLowerCase().replace(/[^a-z0-9
 
 <BaseLayout
   title="Firmware by retail model"
-  description={`Find firmware by the model name on the box: ${plural(data.models.size, "retail model")} from Amcrest, Dahua and Redline, each linked to its firmware and Dahua device IDs.`}
+  description={`Find firmware by the model name on the box: ${plural(data.models.size, "retail model")} from ${data.vendors.size} vendors, each linked to its firmware and Dahua device IDs.`}
   breadcrumbs={[{ name: "Home", href: "/" }, { name: "Retail models" }]}
 >
   <PageHeader title="Retail models">

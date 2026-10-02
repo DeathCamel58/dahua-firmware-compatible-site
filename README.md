@@ -8,24 +8,26 @@ The site is built with [Astro](https://astro.build) and deployed to GitHub Pages
 
 At build time the site fetches two files from [amcrest-compatible-finder](https://github.com/DeathCamel58/amcrest-compatible-finder):
 
-- `firmware_compatible.json`: firmware filename → device IDs found in the file
-- `cameras.json`: firmware filename → download URL, notes and retail model names
+- `cameras.json`: per firmware file, where it came from: each vendor's listing (model names, notes, link, link status, first/last seen, whether it's the vendor's current firmware), the Internet Archive copy, checksums, size, platform and integrity
+- `firmware_compatible.json`: per firmware file, what unpacking it found: hardware IDs (sorted into models, boards, raw hex IDs and ignored tokens) and an analysis status
 
-`src/lib/data.ts` loads both files once per build. It normalizes them into firmwares, devices, device families and retail models, and gives each one a stable URL slug. The parsing of vendor, version and build date from filenames lives in `src/lib/parseFirmware.ts`.
+The format is documented in that repo's `docs/FIRMWARE_DATA.md`. `src/lib/raw.ts` reads it, and also still reads the original format (plain `camera_name`/`notes`/`url`, and plain ID lists), so the site builds against either. `src/lib/data.ts` turns it into the site's model: one page per firmware (identical copies fold into one page and redirect), devices from usable hardware IDs, retail models and vendors from the listings. Vendor logos come from `public/logos/` via `src/data/brands.json`.
 
 ## Pages
 
 | Route | Content |
 | --- | --- |
-| `/firmware/<slug>/` | One page per firmware file |
-| `/device/<slug>/` | One page per device ID |
-| `/model/<slug>/` | One page per retail model (the name on the box), from Amcrest, Dahua or Redline |
+| `/firmware/<slug>/` | One page per firmware file (duplicates and old URLs redirect here) |
+| `/device/<slug>/` | One page per hardware model or board family |
+| `/model/<slug>/` | One page per retail model (the name on the box), with the vendors that list it |
+| `/vendor/<slug>/` | One page per vendor: its current and previous firmware, and its models |
 | `/device/family/<slug>/`, `/firmware/year/<year>/` | Browse hubs |
+| `/new/`, `/feed.xml` | Newly added firmware (by first appearance on a vendor page) and its RSS feed |
 | `/search/` | Client-side search |
 | `/search-index.json` | Search index, generated at build time |
 | `/camera/<Name>/`, `/firmware/<Raw_Name>/` | Redirect stubs for URLs from the old Next.js site |
 
-Search runs entirely in the browser. The index (about 60 KB gzipped) is only downloaded once someone focuses a search box.
+Search runs entirely in the browser. The index is only downloaded once someone focuses a search box.
 
 ## Development
 
@@ -43,6 +45,8 @@ To build against local copies of the JSON files instead of fetching them, set `D
 
 ```bash
 DATA_DIR=/path/to/amcrest-compatible-finder npm run build
+# or against the documented examples, which cover every case the site handles:
+DATA_DIR=/path/to/amcrest-compatible-finder/docs/examples npm run build
 ```
 
 ## Deployment

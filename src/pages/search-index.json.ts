@@ -8,7 +8,7 @@ export const GET: APIRoute = async () => {
   const entries: IndexEntry[] = [
     ...[...data.devices.values()].map((d): IndexEntry => [TYPE_DEVICE, d.name, d.slug, d.firmwares.length]),
     ...[...data.models.values()].map((m): IndexEntry => [TYPE_MODEL, m.name, m.slug, m.firmwares.length]),
-    ...data.firmwareList.map((fw): IndexEntry => [TYPE_FIRMWARE, fw.displayName, fw.slug, fw.buildDate ?? ""]),
+    ...data.firmwareList.map((fw): IndexEntry => [TYPE_FIRMWARE, fw.displayName, fw.slug, fw.date ?? ""]),
   ];
   return new Response(JSON.stringify(entries), {
     headers: { "Content-Type": "application/json" },

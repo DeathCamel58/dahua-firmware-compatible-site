@@ -18,7 +18,7 @@ const isActive = (href: string) => !href.includes("#") && current.startsWith(hre
       <span class="hidden sm:inline">{SITE_NAME}</span>
     </a>
 
-    <nav aria-label="Main" class="hidden md:block">
+    <nav aria-label="Main" class="hidden lg:block">
       <ul class="flex items-center gap-1">
         {
           nav.map((item) => (
@@ -39,11 +39,11 @@ const isActive = (href: string) => !href.includes("#") && current.startsWith(hre
       </ul>
     </nav>
 
-    <div class="ml-auto min-w-0 flex-1 md:max-w-sm">
+    <div class="ml-auto min-w-0 flex-1 lg:max-w-xs">
       {!hideSearch && <Search id="header-search" compact />}
     </div>
 
-    <details class="relative md:hidden">
+    <details class="relative lg:hidden">
       <summary
         class="flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-md text-muted hover:bg-surface-2 hover:text-fg [&::-webkit-details-marker]:hidden"
         aria-label="Menu"

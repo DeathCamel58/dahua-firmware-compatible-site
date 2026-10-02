@@ -4,13 +4,16 @@ export const CONTACT_URL = "https://ipcamtalk.com/members/deathcamel57.206868/";
 export const DATA_REPO_URL = "https://github.com/DeathCamel58/amcrest-compatible-finder";
 /** Google Analytics 4 measurement ID. */
 export const GA_MEASUREMENT_ID = "G-3BRQFW74NY";
+/** Every archived firmware, on the Internet Archive. */
+export const ARCHIVE_COLLECTION_URL = "https://archive.org/search?query=subject%3A%22amcrest-compatible-finder%22";
 export const SITE_REPO_URL = "https://github.com/DeathCamel58/dahua-firmware-compatible-site";
 
 export const nav = [
   { name: "Devices", href: "/device/" },
   { name: "Firmware", href: "/firmware/" },
   { name: "Retail models", href: "/model/" },
-  { name: "How to", href: "/#how-to" },
+  { name: "Vendors", href: "/vendor/" },
+  { name: "New", href: "/new/" },
 ];
 
 export const plural = (count: number, word: string, pluralWord = `${word}s`) =>

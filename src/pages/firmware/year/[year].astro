@@ -20,11 +20,11 @@ const data = await getData();
 const firmwares = firmwaresByYear(data).find((group) => group.year === year)!.firmwares;
 const label = (y: string) => (y === UNDATED ? "Undated" : y);
 
-const title = year === UNDATED ? "Undated firmware files" : `Firmware built in ${year}`;
+const title = year === UNDATED ? "Undated firmware files" : `Firmware from ${year}`;
 const description =
   year === UNDATED
-    ? `${plural(firmwares.length, "firmware file")} whose filename has no build date, with download links and compatible devices.`
-    : `${plural(firmwares.length, "Dahua, Amcrest and Lorex firmware file")} built in ${year}, newest first, with download links and compatible devices.`;
+    ? `${plural(firmwares.length, "firmware file")} with no known release or build date, with download links and compatible devices.`
+    : `${plural(firmwares.length, "Dahua, Amcrest and Lorex firmware file")} from ${year}, newest first, with download links and compatible devices.`;
 ---
 
 <BaseLayout

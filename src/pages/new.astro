@@ -1,0 +1,71 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import PageHeader from "@/components/PageHeader.astro";
+import VendorLogo from "@/components/VendorLogo.astro";
+import { TRACKING_START, analysisLabel, formatDate, getData, newlyAdded, paths } from "@/lib/data";
+import { plural } from "@/lib/site";
+
+const data = await getData();
+const added = newlyAdded(data).slice(0, 200);
+
+// Group by the day the firmware first appeared on a vendor page.
+const days = new Map<string, typeof added>();
+for (const fw of added) {
+  if (!days.has(fw.firstSeen!)) days.set(fw.firstSeen!, []);
+  days.get(fw.firstSeen!)!.push(fw);
+}
+---
+
+<BaseLayout
+  title="Newly added firmware"
+  description="Firmware that vendors have newly published, as found by the daily scan of Dahua, Amcrest, EmpireTech, Lorex and other vendor download pages."
+  breadcrumbs={[{ name: "Home", href: "/" }, { name: "Newly added" }]}
+>
+  <PageHeader title="Newly added firmware">
+    <p class="mt-3 max-w-3xl text-muted">
+      Firmware that appeared on a vendor's download page since tracking began on {formatDate(TRACKING_START)}, newest
+      first. Subscribe with the <a href="/feed.xml">RSS feed</a>.
+    </p>
+  </PageHeader>
+
+  {
+    added.length === 0 ? (
+      <div class="card p-6 text-muted">
+        Nothing new yet. Everything already listed when tracking began counts as existing firmware, so this page fills
+        up as vendors publish new files. Meanwhile, see the <a href="/firmware/">newest firmware by date</a>.
+      </div>
+    ) : (
+      <div class="space-y-8">
+        {[...days].map(([day, firmwares]) => (
+          <section aria-labelledby={`day-${day}`}>
+            <h2 id={`day-${day}`} class="section-title">
+              {formatDate(day)} <span class="text-sm font-normal text-muted">({plural(firmwares.length, "file")})</span>
+            </h2>
+            <ul class="card divide-y divide-border">
+              {firmwares.map((fw) => {
+                const vendors = fw.vendors.map((name) => data.vendors.get(name)).filter((v) => !!v);
+                return (
+                  <li class="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:gap-4">
+                    <div class="flex shrink-0 gap-1">
+                      {vendors.map((v) => (
+                        <VendorLogo brand={v.brand} name={v.name} height={18} />
+                      ))}
+                    </div>
+                    <div class="min-w-0 flex-1">
+                      <a href={paths.firmware(fw)} class="font-mono text-sm break-all">
+                        {fw.displayName}
+                      </a>
+                      <p class="mt-1 text-xs text-muted">
+                        {[fw.version, analysisLabel(fw), fw.vendors.join(", ")].filter(Boolean).join(" · ")}
+                      </p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ))}
+      </div>
+    )
+  }
+</BaseLayout>

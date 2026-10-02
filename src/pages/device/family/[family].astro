@@ -17,8 +17,8 @@ const data = await getData();
 const family = data.families.get(Astro.props.key)!;
 const devices = family.devices.map((name) => {
   const device = data.devices.get(name)!;
-  const newest = device.firmwares.map((f) => data.firmwares.get(f)!).find((fw) => fw.buildDate);
-  return { device, newest: formatDate(newest?.buildDate ?? null) };
+  const newest = device.firmwares.map((f) => data.firmwares.get(f)!).find((fw) => fw.date);
+  return { device, newest: formatDate(newest?.date ?? null) };
 });
 
 const isOther = family.name === "Other";
@@ -43,7 +43,7 @@ const description = isOther
         <tr>
           <th scope="col" class="px-4 py-2 font-medium">Model</th>
           <th scope="col" class="px-4 py-2 text-right font-medium">Firmware files</th>
-          <th scope="col" class="hidden px-4 py-2 text-right font-medium sm:table-cell">Newest build</th>
+          <th scope="col" class="hidden px-4 py-2 text-right font-medium sm:table-cell">Newest</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-border">

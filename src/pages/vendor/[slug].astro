@@ -1,0 +1,90 @@
+---
+import type { GetStaticPaths } from "astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import Chips from "@/components/Chips.astro";
+import FirmwareList from "@/components/FirmwareList.astro";
+import PageHeader from "@/components/PageHeader.astro";
+import Stats from "@/components/Stats.astro";
+import VendorLogo from "@/components/VendorLogo.astro";
+import { formatDate, getData, paths } from "@/lib/data";
+import { plural } from "@/lib/site";
+
+export const getStaticPaths = (async () => {
+  const data = await getData();
+  return [...data.vendors.values()].map((v) => ({ params: { slug: v.slug }, props: { name: v.name } }));
+}) satisfies GetStaticPaths;
+
+const data = await getData();
+const vendor = data.vendors.get(Astro.props.name)!;
+const firmwares = vendor.firmwares.map((f) => data.firmwares.get(f)!);
+const ofVendor = (fw: (typeof firmwares)[number]) => fw.listings.filter((l) => l.vendor === vendor.name);
+// The vendor's current firmware (still listed, marked as latest) first, then everything else.
+const current = firmwares.filter((fw) => ofVendor(fw).some((l) => l.latest === true && !l.delisted));
+const others = firmwares.filter((fw) => !current.includes(fw));
+const delisted = firmwares.filter((fw) => ofVendor(fw).every((l) => l.delisted)).length;
+const newest = firmwares.find((fw) => fw.date);
+const models = vendor.models.map((name) => data.models.get(name)!).filter(Boolean);
+
+const description =
+  `${vendor.name} firmware downloads: ${plural(firmwares.length, "file")}` +
+  (models.length ? ` for ${plural(models.length, "model")}` : "") +
+  (newest ? `, newest from ${formatDate(newest.date)}` : "") +
+  ", with the Dahua hardware each one supports.";
+---
+
+<BaseLayout
+  title={`${vendor.name} firmware`}
+  description={description}
+  breadcrumbs={[{ name: "Home", href: "/" }, { name: "Vendors", href: "/vendor/" }, { name: vendor.name }]}
+>
+  <div class="mb-4">
+    <VendorLogo brand={vendor.brand} name={vendor.name} height={40} />
+  </div>
+  <PageHeader eyebrow="Vendor" title={`${vendor.name} firmware`}>
+    <p class="mt-3 max-w-3xl text-muted">
+      Firmware that {vendor.name} publishes for its Dahua-made devices, as tracked from its download pages.
+      {vendor.brand?.website && (
+        <>
+          {" "}Official site: <a href={vendor.brand.website} rel="noopener">{new URL(vendor.brand.website).hostname}</a>.
+        </>
+      )}
+    </p>
+  </PageHeader>
+
+  <Stats
+    stats={[
+      { label: "Firmware files", value: firmwares.length },
+      { label: "Retail models", value: models.length || null },
+      { label: "Current", value: current.length || null },
+      { label: "No longer listed", value: delisted || null },
+    ]}
+  />
+
+  {
+    current.length > 0 && (
+      <section class="mb-8" aria-labelledby="current-heading">
+        <h2 id="current-heading" class="section-title">Current firmware</h2>
+        <p class="mb-3 text-sm text-muted">Files {vendor.name} lists as the latest version for a product.</p>
+        <FirmwareList firmwares={current} />
+      </section>
+    )
+  }
+
+  {
+    others.length > 0 && (
+      <section class="mb-8" aria-labelledby="other-heading">
+        <h2 id="other-heading" class="section-title">{current.length > 0 ? "Previous and other firmware" : "Firmware"}</h2>
+        <FirmwareList firmwares={others} />
+      </section>
+    )
+  }
+
+  {
+    models.length > 0 && (
+      <section aria-labelledby="models-heading">
+        <h2 id="models-heading" class="section-title">{vendor.name} models</h2>
+        <Chips items={models.map((m) => ({ name: m.name, href: paths.model(m) }))} />
+      </section>
+    )
+  }
+</BaseLayout>

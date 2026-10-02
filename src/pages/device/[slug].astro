@@ -5,7 +5,6 @@ import Chips from "@/components/Chips.astro";
 import FirmwareList from "@/components/FirmwareList.astro";
 import PageHeader from "@/components/PageHeader.astro";
 import Stats from "@/components/Stats.astro";
-import Warning from "@/components/Warning.astro";
 import { collect, formatDate, getData, paths, similarDevices } from "@/lib/data";
 import { plural } from "@/lib/site";
 
@@ -20,7 +19,8 @@ export const getStaticPaths = (async () => {
 const data = await getData();
 const device = data.devices.get(Astro.props.name)!;
 const firmwares = device.firmwares.map((filename) => data.firmwares.get(filename)!);
-const newest = firmwares.find((fw) => fw.buildDate);
+const newest = firmwares.find((fw) => fw.date);
+const vendors = collect(data, device.firmwares, (fw) => fw.vendors);
 const similar = similarDevices(data, device);
 const models = collect(data, device.firmwares, (fw) => fw.models)
   .slice(0, 24)
@@ -28,7 +28,7 @@ const models = collect(data, device.firmwares, (fw) => fw.models)
 
 const description =
   `Firmware that may be compatible with the ${device.name}: ${plural(firmwares.length, "file")}` +
-  (newest ? `, newest built ${formatDate(newest.buildDate)}` : "") +
+  (newest ? `, newest from ${formatDate(newest.date)}` : "") +
   ". Direct download links and compatibility details.";
 ---
 
@@ -42,33 +42,24 @@ const description =
     { name: device.name },
   ]}
 >
-  <PageHeader eyebrow="Device" title={device.name} mono copyable>
+  <PageHeader eyebrow={device.kind === "board" ? "Board family" : "Device"} title={device.name} mono copyable>
     <p class="mt-3 max-w-3xl text-muted">
       {plural(firmwares.length, "firmware file")} may be compatible with the <strong class="text-fg">{device.name}</strong>.
       Part of the <a href={paths.family({ slug: device.familySlug })}>{device.family}</a> family. The newest builds are
       listed first.
+      {device.kind === "board" && " This is a board family name: the x or XXX placeholders stand for several specific models."}
     </p>
   </PageHeader>
 
   <Stats
     stats={[
       { label: "Firmware files", value: firmwares.length },
-      { label: "Newest build", value: formatDate(newest?.buildDate ?? null) },
+      { label: "Newest", value: formatDate(newest?.date ?? null) },
       { label: "Family", value: device.family },
-      { label: "Similar devices", value: similar.length || null },
+      { label: "Vendors", value: vendors.join(", ") || null },
     ]}
   />
 
-  {
-    device.generic && (
-      <div class="mb-6">
-        <Warning title="Generic identifier">
-          <code>{device.name}</code> is a generic tag found inside many firmware files, not a specific model. Search
-          for your exact model instead.
-        </Warning>
-      </div>
-    )
-  }
 
   <section class="mb-8" aria-labelledby="firmware-heading">
     <h2 id="firmware-heading" class="section-title">Compatible firmware</h2>

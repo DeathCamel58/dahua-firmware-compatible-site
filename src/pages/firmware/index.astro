@@ -2,37 +2,33 @@
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import FirmwareList from "@/components/FirmwareList.astro";
 import PageHeader from "@/components/PageHeader.astro";
-import { UNDATED, firmwaresByYear, getData } from "@/lib/data";
+import VendorLogo from "@/components/VendorLogo.astro";
+import { UNDATED, firmwaresByYear, getData, paths } from "@/lib/data";
 import { plural } from "@/lib/site";
 
 const data = await getData();
 const years = firmwaresByYear(data);
 const newest = data.firmwareList.slice(0, 25);
 
-const vendors = new Map<string, number>();
-for (const fw of data.firmwareList) {
-  const vendor = fw.vendor ?? "Unknown";
-  vendors.set(vendor, (vendors.get(vendor) ?? 0) + 1);
-}
-const vendorList = [...vendors].sort((a, b) => b[1] - a[1]);
+const vendorList = [...data.vendors.values()].sort((a, b) => b.firmwares.length - a.firmwares.length);
 
 const yearLabel = (year: string) => (year === UNDATED ? "Undated" : year);
 ---
 
 <BaseLayout
   title="All Dahua, Amcrest & Lorex firmware files"
-  description={`Browse ${plural(data.firmwareList.length, "firmware file")} for Dahua-made cameras, NVRs and DVRs (including Amcrest and Lorex), by build year, with download links and compatible devices.`}
+  description={`Browse ${plural(data.firmwareList.length, "firmware file")} for Dahua-made cameras, NVRs and DVRs (including Amcrest and Lorex), by year, with download links and compatible devices.`}
   breadcrumbs={[{ name: "Home", href: "/" }, { name: "Firmware" }]}
 >
   <PageHeader title="Firmware files">
     <p class="mt-3 max-w-3xl text-muted">
-      {plural(data.firmwareList.length, "firmware file")} from Dahua and its OEMs, organised by build year. Open a file
+      {plural(data.firmwareList.length, "firmware file")} from Dahua and its OEMs, organised by year. Open a file
       to see which devices it may support.
     </p>
   </PageHeader>
 
   <section class="mb-10" aria-labelledby="years-heading">
-    <h2 id="years-heading" class="section-title">Browse by build year</h2>
+    <h2 id="years-heading" class="section-title">Browse by year</h2>
     <ul class="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
       {
         years.map(({ year, firmwares }) => (
@@ -51,17 +47,22 @@ const yearLabel = (year: string) => (year === UNDATED ? "Undated" : year);
   </section>
 
   <section class="mb-10" aria-labelledby="newest-heading">
-    <h2 id="newest-heading" class="section-title">Newest builds</h2>
+    <h2 id="newest-heading" class="section-title">Newest firmware</h2>
     <FirmwareList firmwares={newest} />
   </section>
 
   <section aria-labelledby="vendors-heading">
-    <h2 id="vendors-heading" class="section-title">By vendor (from the filename)</h2>
-    <ul class="flex flex-wrap gap-2 text-sm">
+    <h2 id="vendors-heading" class="section-title">By vendor</h2>
+    <ul class="flex flex-wrap gap-3">
       {
-        vendorList.map(([vendor, count]) => (
-          <li class="rounded-md border border-border bg-surface px-3 py-1">
-            {vendor} <span class="text-muted">· {count.toLocaleString("en-US")}</span>
+        vendorList.map((vendor) => (
+          <li>
+            <a href={paths.vendor(vendor)} class="card flex items-center gap-3 px-3 py-2 text-sm text-fg no-underline hover:border-accent hover:no-underline">
+              <VendorLogo brand={vendor.brand} name={vendor.name} height={20} />
+              <span>
+                {vendor.name} <span class="text-muted">· {vendor.firmwares.length.toLocaleString("en-US")}</span>
+              </span>
+            </a>
           </li>
         ))
       }

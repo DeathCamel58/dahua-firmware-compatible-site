@@ -1,0 +1,44 @@
+---
+import type { Brand } from "@/lib/data";
+
+interface Props {
+  brand: Brand | null;
+  /** Shown as text when there's no logo. */
+  name: string;
+  /** Logo box height in px. */
+  height?: number;
+  class?: string;
+}
+
+const { brand, name, height = 28, class: className } = Astro.props;
+// Logos are drawn for one background, so give each its own tile: white for dark-ink logos and a
+// dark one for white logos, whatever the page theme is.
+const tile = brand?.background === "dark" ? "bg-[#151b23]" : "bg-white";
+const width = brand?.width && brand?.height ? Math.round((brand.width / brand.height) * height) : undefined;
+---
+
+{
+  brand?.logo ? (
+    <span
+      class:list={["inline-flex shrink-0 items-center justify-center rounded-md px-2 py-1 ring-1 ring-border", tile, className]}
+      style={`height:${height + 8}px`}
+    >
+      <img
+        src={brand.logo}
+        alt={`${name} logo`}
+        height={height}
+        width={width}
+        loading="lazy"
+        decoding="async"
+        class="h-full w-auto max-w-[9rem] object-contain"
+      />
+    </span>
+  ) : (
+    <span
+      class:list={["inline-flex shrink-0 items-center rounded-md bg-surface-2 px-2 font-semibold text-fg ring-1 ring-border", className]}
+      style={`height:${height + 8}px`}
+    >
+      {name}
+    </span>
+  )
+}

@@ -6,44 +6,71 @@ import FirmwareList from "@/components/FirmwareList.astro";
 import PageHeader from "@/components/PageHeader.astro";
 import Redirect from "@/components/Redirect.astro";
 import Stats from "@/components/Stats.astro";
+import VendorLogo from "@/components/VendorLogo.astro";
 import Warning from "@/components/Warning.astro";
-import { formatDate, getData, legacySegment, paths, relatedFirmwares, type Firmware } from "@/lib/data";
+import {
+  analysisLabel,
+  formatDate,
+  formatSize,
+  getData,
+  legacySegment,
+  paths,
+  relatedFirmwares,
+  type Firmware,
+  type Listing,
+} from "@/lib/data";
 import { clampDescription, describeWithList, plural } from "@/lib/site";
 
 export const getStaticPaths = (async () => {
   const data = await getData();
   const slugs = new Set(data.firmwareList.map((fw) => fw.slug));
-  return data.firmwareList.flatMap((fw) => {
-    const routes: { params: { slug: string }; props: { filename: string; redirect?: boolean } }[] = [
-      { params: { slug: fw.slug }, props: { filename: fw.filename } },
-    ];
-    const legacy = legacySegment(fw.filename, slugs);
-    if (legacy) routes.push({ params: { slug: legacy }, props: { filename: fw.filename, redirect: true } });
-    return routes;
-  });
+  const routes: { params: { slug: string }; props: { filename: string; redirect: boolean } }[] = [];
+  const taken = new Set<string>();
+  const add = (slug: string, filename: string, redirect: boolean) => {
+    if (taken.has(slug)) return;
+    taken.add(slug);
+    routes.push({ params: { slug }, props: { filename, redirect } });
+  };
+  for (const fw of data.firmwareList) add(fw.slug, fw.filename, false);
+  // Identical copies published under other names redirect to their main page…
+  for (const [alias, main] of data.aliases) add(data.aliasSlugs.get(alias)!, main, true);
+  // …and so do the old Next.js URLs, which used the raw file name.
+  for (const fw of data.firmwareList) {
+    for (const name of [fw.filename, ...fw.aliases]) {
+      const legacy = legacySegment(name, slugs);
+      if (legacy) add(legacy, fw.filename, true);
+    }
+  }
+  return routes;
 }) satisfies GetStaticPaths;
 
 const { filename, redirect } = Astro.props;
 const data = await getData();
 const fw = data.firmwares.get(filename)!;
 
-const date = formatDate(fw.buildDate);
+const date = formatDate(fw.date);
+const dateLabel = fw.dateSource === "vendor" ? "Released" : "Built";
 const devices = fw.devices.map((name) => data.devices.get(name)!);
-const models = fw.models.map((name) => data.models.get(name)!);
 const related: Firmware[] = redirect ? [] : relatedFirmwares(data, fw);
+const vendorText = fw.vendors.length ? fw.vendors.join(" and ") : null;
+const notDahua = fw.platform === "hikvision" || fw.analysis === "not_dahua";
 
-const highlights = devices.filter((d) => !d.generic).map((d) => d.name);
-const built = fw.vendor || date ? `${fw.vendor ? `${fw.vendor} firmware` : "Firmware"}${date ? ` built ${date}` : ""}` : null;
+const highlights = devices.filter((d) => d.kind === "model").map((d) => d.name);
+const built = `${vendorText ? `${vendorText} firmware` : "Firmware"}${date ? ` ${dateLabel.toLowerCase()} ${date}` : ""}`;
 const compatibility =
-  devices.length > 0 ? `May work with ${plural(devices.length, "device")}` : "No device compatibility data yet";
+  fw.platform === "hikvision"
+    ? "Hikvision firmware, not for Dahua devices"
+    : devices.length > 0
+      ? `May work with ${plural(devices.length, "device")}`
+      : analysisLabel(fw);
 // The meta description leads with the exact filename (what people search for); the on-page
 // summary skips it because the H1 already shows it.
-const lead = built ? `${fw.displayName}: ${built}. ${compatibility}` : `${fw.displayName} firmware. ${compatibility}`;
-const description =
-  devices.length > 0 ? describeWithList(lead, highlights) : clampDescription(`${lead}.`);
-const summaryLead = built ? `${built}. ${compatibility}` : compatibility;
+const lead = `${fw.displayName}: ${built}. ${compatibility}`;
+const description = devices.length > 0 ? describeWithList(lead, highlights) : clampDescription(`${lead}.`);
 const summary =
-  devices.length > 0 ? describeWithList(summaryLead, highlights.slice(0, 3), "including", 300) : `${summaryLead}.`;
+  devices.length > 0
+    ? describeWithList(`${built}. ${compatibility}`, highlights.slice(0, 3), "including", 300)
+    : `${built}. ${compatibility}.`;
 
 const jsonLd = [
   {
@@ -53,11 +80,32 @@ const jsonLd = [
     applicationCategory: "Firmware",
     operatingSystem: "Embedded",
     ...(fw.version ? { softwareVersion: fw.version } : {}),
-    ...(fw.buildDate ? { datePublished: fw.buildDate } : {}),
-    ...(fw.url ? { downloadUrl: fw.url } : {}),
-    ...(fw.vendor ? { publisher: { "@type": "Organization", name: fw.vendor.replace(/ \(.*\)$/, "") } } : {}),
+    ...(fw.date ? { datePublished: fw.date } : {}),
+    ...(fw.download && !fw.truncated ? { downloadUrl: fw.download.url } : {}),
+    ...(fw.size ? { fileSize: formatSize(fw.size) } : {}),
+    ...(fw.vendors[0] ? { publisher: { "@type": "Organization", name: fw.vendors[0] } } : {}),
   },
 ];
+
+const linkBadge = (l: Listing) =>
+  l.urlStatus === "dead"
+    ? { text: "Link dead", warn: true }
+    : l.urlStatus === "error"
+      ? { text: "Link not responding", warn: true }
+      : l.urlStatus === "ok"
+        ? { text: "Link checked", warn: false }
+        : null;
+const listingTags = (l: Listing) =>
+  [
+    l.latest === true && !l.delisted ? "Current" : null,
+    l.latest === false ? "Previous version" : null,
+    l.delisted ? "No longer listed" : null,
+    l.inferred ? "From earlier data" : null,
+  ].filter((t): t is string => !!t);
+const checksums = [
+  ["MD5", fw.md5],
+  ["SHA-256", fw.sha256],
+].filter((pair): pair is [string, string] => !!pair[1]);
 ---
 
 {
@@ -68,91 +116,249 @@ const jsonLd = [
       title={fw.title}
       description={description}
       jsonLd={jsonLd}
-      breadcrumbs={[
-        { name: "Home", href: "/" },
-        { name: "Firmware", href: "/firmware/" },
-        { name: fw.displayName },
-      ]}
+      breadcrumbs={[{ name: "Home", href: "/" }, { name: "Firmware", href: "/firmware/" }, { name: fw.displayName }]}
     >
       <PageHeader eyebrow="Firmware" title={fw.displayName} mono copyable>
         <p class="mt-3 max-w-3xl text-muted">{summary}</p>
       </PageHeader>
 
+      {(fw.truncated || notDahua) && (
+        <div class="mb-6 space-y-3">
+          {fw.truncated && (
+            <Warning title="Truncated file: it can't be installed">
+              This copy is cut off part-way through, so a device will reject it.
+              {fw.vendorCopyTruncated
+                ? " The vendor serves the same incomplete file, so no complete copy is known."
+                : " Its hardware IDs were read from the intact start and are probably right, but get the firmware from somewhere else."}
+            </Warning>
+          )}
+          {fw.platform === "hikvision" ? (
+            <Warning title="Hikvision firmware">
+              This file is Hikvision firmware (the vendor sells both brands). It won't work on Dahua-made devices.
+            </Warning>
+          ) : (
+            notDahua && (
+              <Warning title="Not identified as Dahua firmware">
+                The file isn't in Dahua's format, so it wasn't analysed or linked to Dahua devices.
+              </Warning>
+            )
+          )}
+        </div>
+      )}
+
       <Stats
         stats={[
-          { label: "Build date", value: date },
+          { label: dateLabel, value: date },
           { label: "Version", value: fw.version },
-          { label: "Compatible devices", value: devices.length },
-          { label: "Vendor", value: fw.vendor },
+          { label: "Size", value: formatSize(fw.size) },
+          { label: "Hardware", value: devices.length ? plural(devices.length, "device") : analysisLabel(fw) },
         ]}
       />
 
       <section class="card mb-8 p-5" aria-labelledby="download-heading">
         <h2 id="download-heading" class="section-title">Download</h2>
-        {fw.url ? (
-          <>
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <a href={fw.url} class="btn-primary self-start" rel="nofollow noopener">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                  <path d="M12 3v12m0 0-5-5m5 5 5-5M4 21h16" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-                Download firmware
-              </a>
-              {fw.host && <p class="text-sm text-muted">Hosted on <span class="font-mono">{fw.host}</span></p>}
-            </div>
-            <p class="mt-3 font-mono text-xs break-all text-muted">{fw.url}</p>
-          </>
+        {fw.download ? (
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <a href={fw.download.url} class:list={[fw.truncated ? "btn-ghost" : "btn-primary", "self-start"]} rel="nofollow noopener">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M12 3v12m0 0-5-5m5 5 5-5M4 21h16" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              {fw.truncated ? "Download truncated file" : "Download firmware"}
+            </a>
+            <p class="text-sm text-muted">
+              {fw.download.kind === "archive" ? (
+                <>
+                  Permanent copy on the <strong class="text-fg">Internet Archive</strong>
+                  {fw.archiveItem && (
+                    <>
+                      {" "}(<a href={fw.archiveItem} rel="noopener">item page</a>)
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  From <span class="font-mono">{fw.download.label}</span>
+                </>
+              )}
+            </p>
+          </div>
         ) : (
-          <p class="text-muted">No download link is known for this file.</p>
+          <p class="text-muted">No working download link is known for this file.</p>
         )}
-        <div class="mt-4">
+
+        {(checksums.length > 0 || fw.changelog) && (
+          <dl class="mt-5 grid gap-3 text-sm">
+            {checksums.map(([label, value]) => (
+              <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
+                <dt class="w-20 shrink-0 text-muted">{label}</dt>
+                <dd class="flex min-w-0 items-center gap-2">
+                  <code class="min-w-0 text-xs break-all">{value}</code>
+                  <button type="button" data-copy={value} class="btn-ghost shrink-0 px-2 py-0.5 text-xs" aria-label={`Copy ${label}`}>
+                    <span data-copy-label>Copy</span>
+                  </button>
+                </dd>
+              </div>
+            ))}
+            {fw.changelog && (
+              <div class="flex flex-col gap-1 sm:flex-row sm:gap-3">
+                <dt class="w-20 shrink-0 text-muted">Changelog</dt>
+                <dd>
+                  <a href={fw.changelog} rel="nofollow noopener">Release notes</a>
+                </dd>
+              </div>
+            )}
+          </dl>
+        )}
+
+        <div class="mt-5">
           <Warning>
-            Compatibility is detected automatically and may be wrong. Check that your device's{" "}
-            <code>updateSerial</code> matches before flashing. A wrong firmware can brick your device.
+            Compatibility is detected automatically and may be wrong. Check that your device's <code>updateSerial</code>{" "}
+            matches before flashing. A wrong firmware can brick your device.
           </Warning>
         </div>
       </section>
 
-      {fw.notes.length > 0 && (
-        <section class="mb-8" aria-labelledby="notes-heading">
-          <h2 id="notes-heading" class="section-title">Vendor notes</h2>
-          <ul class="card list-inside list-disc space-y-1 p-5 text-sm">
-            {fw.notes.map((note) => <li>{note}</li>)}
+      {fw.listings.length > 0 && (
+        <section class="mb-8" aria-labelledby="vendors-heading">
+          <h2 id="vendors-heading" class="section-title">Where it's published</h2>
+          <ul class="grid gap-3 md:grid-cols-2">
+            {fw.listings.map((l) => {
+              const badge = linkBadge(l);
+              const vendor = l.vendor ? data.vendors.get(l.vendor) : undefined;
+              const models = l.models.map((name) => data.models.get(name)).filter((m) => !!m);
+              return (
+                <li class="card flex flex-col gap-3 p-4">
+                  <div class="flex flex-wrap items-center gap-3">
+                    {vendor ? (
+                      <a href={paths.vendor(vendor)} class="no-underline hover:no-underline">
+                        <VendorLogo brand={l.brand} name={vendor.name} height={24} />
+                      </a>
+                    ) : (
+                      <VendorLogo brand={null} name="?" height={24} />
+                    )}
+                    <div class="min-w-0 text-sm">
+                      <p class="font-semibold">{l.vendor ?? "Unknown vendor"}</p>
+                      <p class="text-xs text-muted">{l.source}</p>
+                    </div>
+                    <div class="ml-auto flex flex-wrap gap-1">
+                      {listingTags(l).map((tag) => (
+                        <span
+                          class:list={[
+                            "rounded px-1.5 py-0.5 text-xs font-medium",
+                            tag === "Current" ? "bg-accent-soft text-accent" : "bg-surface-2 text-muted",
+                          ]}
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  {l.aliasFilename && (
+                    <p class="text-xs text-muted">
+                      Published as <code class="break-all">{l.aliasFilename}</code> (an identical file)
+                    </p>
+                  )}
+                  {models.length > 0 && (
+                    <div>
+                      <p class="mb-1 text-xs text-muted">Sold as</p>
+                      <Chips items={models.map((m) => ({ name: m.name, href: paths.model(m) }))} />
+                    </div>
+                  )}
+                  {l.series.length > 0 && <p class="text-xs text-muted">Series: {l.series.join(", ")}</p>}
+                  {l.notes.length > 0 && (
+                    <ul class="list-inside list-disc text-sm">
+                      {l.notes.map((note) => (
+                        <li class="whitespace-pre-line">{note}</li>
+                      ))}
+                    </ul>
+                  )}
+                  {(l.version || l.date) && (
+                    <p class="text-xs text-muted">
+                      {[l.version, l.date && `Listed date ${formatDate(l.date)}`].filter(Boolean).join(" · ")}
+                    </p>
+                  )}
+                  {l.url && (
+                    <p class="mt-auto flex flex-wrap items-center gap-2 text-sm">
+                      <a href={l.url} rel="nofollow noopener" class:list={[l.urlStatus === "dead" && "text-muted line-through"]}>
+                        Vendor link ({l.hostLabel})
+                      </a>
+                      {badge && (
+                        <span
+                          class:list={[
+                            "rounded px-1.5 py-0.5 text-xs",
+                            badge.warn ? "bg-warn-soft text-warn" : "bg-surface-2 text-muted",
+                          ]}
+                        >
+                          {badge.text}
+                        </span>
+                      )}
+                      {l.changelog && l.changelog !== fw.changelog && (
+                        <a href={l.changelog} rel="nofollow noopener" class="text-xs">
+                          Release notes
+                        </a>
+                      )}
+                    </p>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </section>
       )}
 
       <section class="mb-8" aria-labelledby="devices-heading">
-        <h2 id="devices-heading" class="section-title">Compatible devices ({devices.length.toLocaleString("en-US")})</h2>
-        {devices.length > 0 ? (
+        <h2 id="devices-heading" class="section-title">Compatible hardware</h2>
+        {fw.analysis === "ok" && !notDahua ? (
           <>
-            <Chips items={devices.map((d) => ({ name: d.name, href: paths.device(d) }))} />
-            {devices.some((d) => d.generic) && (
-              <p class="mt-3 text-sm text-muted">
-                Generic identifiers such as <code>DAHUA</code> mean the file only names the vendor, not specific
-                models.
-              </p>
+            {devices.length > 0 ? (
+              <>
+                <p class="mb-3 text-sm text-muted">
+                  Hardware IDs this firmware's installer accepts ({plural(devices.length, "device")}).
+                  {devices.some((d) => d.kind === "board") && " Names with placeholders such as x or XXX are board families."}
+                </p>
+                <Chips items={devices.map((d) => ({ name: d.name, href: paths.device(d) }))} />
+              </>
+            ) : (
+              <p class="text-muted">Only raw hardware IDs were found (below).</p>
+            )}
+            {fw.hardware.hwids.length > 0 && (
+              <details class="mt-4 text-sm">
+                <summary class="cursor-pointer text-muted">
+                  {plural(fw.hardware.hwids.length, "raw hardware ID")} (these identify a board, not a model)
+                </summary>
+                <p class="mt-2 font-mono text-xs leading-relaxed break-all text-muted">{fw.hardware.hwids.join(" ")}</p>
+              </details>
             )}
           </>
         ) : (
           <p class="text-muted">
-            No device list has been extracted from this file yet. If you know which devices it supports, please get in
-            touch.
+            {notDahua
+              ? "Not analysed, because this isn't Dahua firmware."
+              : fw.analysis === "no_ids"
+                ? "The file unpacked fine, but it has no list of supported hardware. That's common for MCU, access-control and thermal firmware."
+                : fw.analysis === "extract_failed"
+                  ? `The file couldn't be unpacked${fw.analysisError ? ` (${fw.analysisError})` : ""}.`
+                  : "Analysis pending: this file hasn't been downloaded and checked yet."}
           </p>
         )}
       </section>
 
-      {models.length > 0 && (
-        <section class="mb-8" aria-labelledby="models-heading">
-          <h2 id="models-heading" class="section-title">Retail models listed for this file</h2>
-          <Chips items={models.map((m) => ({ name: m.name, href: paths.model(m) }))} />
+      {fw.aliases.length > 0 && (
+        <section class="mb-8" aria-labelledby="aliases-heading">
+          <h2 id="aliases-heading" class="section-title">Also published as</h2>
+          <p class="mb-2 text-sm text-muted">Byte-for-byte identical files under other names:</p>
+          <ul class="space-y-1 font-mono text-sm break-all">
+            {fw.aliases.map((a) => (
+              <li>{a}</li>
+            ))}
+          </ul>
         </section>
       )}
 
       {related.length > 0 && (
         <section aria-labelledby="related-heading">
           <h2 id="related-heading" class="section-title">Related firmware</h2>
-          <p class="mb-3 text-sm text-muted">Other files that list many of the same devices.</p>
+          <p class="mb-3 text-sm text-muted">Other files for much of the same hardware, from any vendor.</p>
           <FirmwareList firmwares={related} showDownload={false} />
         </section>
       )}

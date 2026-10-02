@@ -59,7 +59,7 @@ export function loadIndex(): Promise<Prepared> {
 }
 
 function describe(type: EntryType, meta: string | number): string {
-  if (type === TYPE_FIRMWARE) return meta ? `Built ${meta}` : "";
+  if (type === TYPE_FIRMWARE) return meta ? `From ${meta}` : "";
   const count = Number(meta);
   return `${count.toLocaleString("en-US")} firmware${count === 1 ? "" : "s"}`;
 }

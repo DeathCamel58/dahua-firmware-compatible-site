@@ -5,7 +5,8 @@ import Chips from "@/components/Chips.astro";
 import FirmwareList from "@/components/FirmwareList.astro";
 import PageHeader from "@/components/PageHeader.astro";
 import Stats from "@/components/Stats.astro";
-import { brandName, collect, formatDate, getData, paths } from "@/lib/data";
+import VendorLogo from "@/components/VendorLogo.astro";
+import { collect, formatDate, getData, paths } from "@/lib/data";
 import { plural } from "@/lib/site";
 
 export const getStaticPaths = (async () => {
@@ -19,21 +20,24 @@ export const getStaticPaths = (async () => {
 const data = await getData();
 const model = data.models.get(Astro.props.name)!;
 const firmwares = model.firmwares.map((filename) => data.firmwares.get(filename)!);
-const newest = firmwares.find((fw) => fw.buildDate);
-const notes = collect(data, model.firmwares, (fw) => fw.notes);
+const newest = firmwares.find((fw) => fw.date);
+// Notes from the listings that actually name this model (other vendors' notes may be about other SKUs).
+const notes = [
+  ...new Set(firmwares.flatMap((fw) => fw.listings.filter((l) => l.models.includes(model.name)).flatMap((l) => l.notes))),
+];
+const vendors = model.publishers.map((name) => data.vendors.get(name)!).filter(Boolean);
 const devices = collect(data, model.firmwares, (fw) => fw.devices)
   .map((name) => data.devices.get(name)!)
-  .filter((d) => !d.generic)
   .slice(0, 48);
 
 // Prefix the brand when the model is only listed by one, e.g. "Amcrest IP8M-2493EW-AI-V3".
-const brand = model.publishers.length === 1 ? brandName(model.publishers[0]) : null;
+const brand = model.publishers.length === 1 ? model.publishers[0] : null;
 const fullName = brand && !model.name.toUpperCase().startsWith(brand.toUpperCase()) ? `${brand} ${model.name}` : model.name;
 const listedBy = model.publishers.length > 0 ? model.publishers.join(" and ") : "Its download source";
 
 const description =
   `${fullName} firmware: ${plural(firmwares.length, "file")}` +
-  (newest ? `, newest built ${formatDate(newest.buildDate)}` : "") +
+  (newest ? `, newest from ${formatDate(newest.date)}` : "") +
   ". Download links plus the Dahua device IDs the same firmware supports.";
 ---
 
@@ -42,6 +46,17 @@ const description =
   description={description}
   breadcrumbs={[{ name: "Home", href: "/" }, { name: "Retail models", href: "/model/" }, { name: model.name }]}
 >
+  {
+    vendors.length > 0 && (
+      <div class="mb-3 flex flex-wrap gap-2">
+        {vendors.map((v) => (
+          <a href={paths.vendor(v)} class="no-underline hover:no-underline" title={`${v.name} firmware`}>
+            <VendorLogo brand={v.brand} name={v.name} height={22} />
+          </a>
+        ))}
+      </div>
+    )
+  }
   <PageHeader eyebrow={brand ? `${brand} model` : "Retail model"} title={model.name} mono copyable>
     <p class="mt-3 max-w-3xl text-muted">
       {listedBy} lists {plural(firmwares.length, "firmware file")} for the <strong class="text-fg">{model.name}</strong>.
@@ -53,8 +68,8 @@ const description =
   <Stats
     stats={[
       { label: "Firmware files", value: firmwares.length },
-      { label: "Newest build", value: formatDate(newest?.buildDate ?? null) },
-      { label: "Listed by", value: model.publishers.map(brandName).join(", ") || null },
+      { label: "Newest", value: formatDate(newest?.date ?? null) },
+      { label: "Listed by", value: model.publishers.join(", ") || null },
       { label: "Dahua device IDs", value: devices.length || null },
     ]}
   />

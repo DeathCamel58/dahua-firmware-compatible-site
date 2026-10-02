@@ -3,6 +3,7 @@ import BaseLayout from "@/layouts/BaseLayout.astro";
 import Chips from "@/components/Chips.astro";
 import FirmwareList from "@/components/FirmwareList.astro";
 import Search from "@/components/Search.astro";
+import VendorLogo from "@/components/VendorLogo.astro";
 import Warning from "@/components/Warning.astro";
 import { getData, paths } from "@/lib/data";
 import { CONTACT_URL, SITE_NAME, SITE_TAGLINE, plural } from "@/lib/site";
@@ -18,7 +19,9 @@ const stats = [
   { value: data.firmwareList.length, label: "firmware files" },
   { value: data.devices.size, label: "device IDs" },
   { value: data.models.size, label: "retail models" },
+  { value: data.vendors.size, label: "vendors" },
 ];
+const vendors = [...data.vendors.values()].sort((a, b) => b.firmwares.length - a.firmwares.length);
 
 const infoUrls = [
   "http://<IP_ADDRESS>/cgi-bin/magicBox.cgi?action=getSystemInfoNew",
@@ -64,6 +67,39 @@ const jsonLd = [
     </dl>
   </section>
 
+  <section id="why" class="scroll-mt-24 py-8" aria-labelledby="why-heading">
+    <div class="card grid gap-6 p-6 md:grid-cols-[1fr_1.1fr] md:p-8">
+      <div>
+        <h2 id="why-heading" class="text-2xl font-bold">Why this site exists</h2>
+        <div class="mt-3 space-y-3 text-muted">
+          <p>
+            My Dahua IP cameras wouldn't play their live stream in a web browser. While digging into it, I found that
+            another brand sold the <strong class="text-fg">same Dahua-made camera</strong> under its own name, and that
+            brand had published newer firmware with HTML5 streaming support. I flashed my camera with their firmware, and
+            it worked.
+          </p>
+          <p>
+            Dahua builds devices for many brands (Amcrest, EmpireTech, Lorex and others), and each one publishes firmware
+            on its own schedule. This site collects those files and matches them by the hardware they install on, so you
+            can find newer or alternative firmware for your device, whoever sold it to you.
+          </p>
+        </div>
+      </div>
+      <Warning title="Read this before flashing anything">
+        <p>
+          What worked for my cameras may not work for yours. Firmware from another brand can remove features, change
+          settings or languages, block going back to an older version, or leave a device unable to boot.
+        </p>
+        <p class="mt-2">
+          <strong>You flash firmware entirely at your own risk.</strong> I'm not responsible for any damage, and neither
+          is the vendor that published the firmware. The compatibility lists here are generated automatically and can be
+          wrong, so always check that your device's <code>updateSerial</code> matches, and keep a note of your current
+          firmware version before you start.
+        </p>
+      </Warning>
+    </div>
+  </section>
+
   <section id="how-to" class="scroll-mt-24 py-8" aria-labelledby="how-to-heading">
     <h2 id="how-to-heading" class="mb-6 text-2xl font-bold">How to find the right firmware</h2>
     <ol class="grid gap-4 md:grid-cols-3">
@@ -101,12 +137,24 @@ const jsonLd = [
         </p>
       </li>
     </ol>
-    <div class="mt-6">
-      <Warning>
-        Every firmware update you make is at your own risk. Neither this site nor the vendor that publishes the firmware
-        is responsible for any damage. These lists are generated automatically and can contain mistakes.
-      </Warning>
+  </section>
+
+  <section class="py-8" aria-labelledby="vendors-heading">
+    <div class="mb-4 flex items-baseline justify-between gap-4">
+      <h2 id="vendors-heading" class="text-2xl font-bold">Firmware by vendor</h2>
+      <a href="/vendor/" class="text-sm">All vendors →</a>
     </div>
+    <ul class="flex flex-wrap gap-3">
+      {
+        vendors.map((v) => (
+          <li>
+            <a href={paths.vendor(v)} class="block no-underline hover:no-underline" title={`${v.name} firmware`}>
+              <VendorLogo brand={v.brand} name={v.name} height={28} />
+            </a>
+          </li>
+        ))
+      }
+    </ul>
   </section>
 
   <section class="py-8" aria-labelledby="families-heading">
