@@ -1,0 +1,76 @@
+---
+interface Props {
+  id: string;
+  /** Compact header variant vs. large hero variant. */
+  compact?: boolean;
+  autofocus?: boolean;
+  value?: string;
+  /** Show the live suggestions dropdown (the /search/ page renders its own results). */
+  suggest?: boolean;
+}
+
+const { id, compact = false, autofocus = false, value, suggest = true } = Astro.props;
+const listId = `${id}-results`;
+---
+
+<form action="/search/" method="get" role="search" class="relative w-full" data-search data-suggest={String(suggest)}>
+  <label for={id} class="sr-only">Search devices, Amcrest models and firmware</label>
+  <div class="relative">
+    <svg
+      class:list={["pointer-events-none absolute top-1/2 -translate-y-1/2 text-muted", compact ? "left-3" : "left-4"]}
+      width={compact ? 16 : 20}
+      height={compact ? 16 : 20}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      aria-hidden="true"
+    >
+      <circle cx="11" cy="11" r="7"></circle>
+      <path d="m20 20-3.5-3.5" stroke-linecap="round"></path>
+    </svg>
+    <input
+      id={id}
+      name="q"
+      type="search"
+      value={value}
+      autofocus={autofocus}
+      autocomplete="off"
+      autocapitalize="characters"
+      spellcheck="false"
+      enterkeyhint="search"
+      placeholder={compact ? "Search models…" : "Enter a model, e.g. IPC-HDW2431T-AS or IP8M-2493EB"}
+      role="combobox"
+      aria-autocomplete="list"
+      aria-expanded="false"
+      aria-controls={listId}
+      class:list={[
+        "w-full rounded-lg border border-border bg-surface-2 text-fg placeholder:text-muted focus:border-accent focus:bg-surface focus:outline-none",
+        compact ? "h-10 pl-9 pr-10 text-sm" : "h-14 pl-12 pr-4 text-base shadow-sm sm:text-lg",
+      ]}
+    />
+    {
+      compact && (
+        <kbd
+          class="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded border border-border px-1.5 font-mono text-xs text-muted sm:block"
+          aria-hidden="true"
+        >
+          /
+        </kbd>
+      )
+    }
+  </div>
+  <div
+    id={listId}
+    role="listbox"
+    aria-label="Search suggestions"
+    hidden
+    class="card absolute left-0 right-0 z-40 mt-2 max-h-[70vh] overflow-y-auto p-1 shadow-xl"
+  >
+  </div>
+</form>
+
+<script>
+  import { initSearchBoxes } from "@/scripts/search-box";
+  initSearchBoxes();
+</script>

@@ -1,28 +1,22 @@
 {
-  "name": "amcrest-firmware-compatible-site",
-  "version": "0.1.0",
+  "name": "dahua-firmware-compatible-site",
+  "version": "1.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check"
   },
   "dependencies": {
-    "@headlessui/react": "^2.1.2",
-    "next": "14.2.5",
-    "react": "^18",
-    "react-dom": "^18",
-    "react-icons": "^5.3.0"
+    "@astrojs/sitemap": "^3.7.4",
+    "@tailwindcss/vite": "^4.3.3",
+    "astro": "^7.3.5",
+    "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
-    "@types/node": "^20",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
-    "eslint": "^8",
-    "eslint-config-next": "14.2.5",
-    "postcss": "^8",
-    "tailwindcss": "^3.4.1",
-    "typescript": "^5"
+    "@astrojs/check": "^0.9.10",
+    "typescript": "^6.0.3"
   }
 }

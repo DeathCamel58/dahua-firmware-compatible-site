@@ -1,0 +1,23 @@
+---
+// The old site listed everything on this one page. It is kept so existing links still work.
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import Search from "@/components/Search.astro";
+---
+
+<BaseLayout
+  title="Firmware compatibility"
+  description="Look up which firmware files may be compatible with a Dahua, Amcrest or Lorex device."
+  hideHeaderSearch
+  breadcrumbs={[{ name: "Home", href: "/" }, { name: "Compatibility" }]}
+>
+  <h1 class="mb-3 text-3xl font-bold">Firmware compatibility</h1>
+  <p class="mb-6 max-w-3xl text-muted">
+    The full list now has its own pages. Search for your device's <code>updateSerial</code> or model, or browse below.
+  </p>
+  <Search id="compat-search" />
+  <ul class="mt-8 grid gap-3 sm:grid-cols-3">
+    <li><a href="/device/" class="card block p-4 font-semibold no-underline hover:border-accent">Browse devices →</a></li>
+    <li><a href="/firmware/" class="card block p-4 font-semibold no-underline hover:border-accent">Browse firmware →</a></li>
+    <li><a href="/amcrest/" class="card block p-4 font-semibold no-underline hover:border-accent">Browse Amcrest models →</a></li>
+  </ul>
+</BaseLayout>

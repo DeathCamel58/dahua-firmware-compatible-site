@@ -1,0 +1,18 @@
+---
+// Redirect stubs for the old /camera/<name> URLs from the Next.js version of the site.
+import type { GetStaticPaths } from "astro";
+import Redirect from "@/components/Redirect.astro";
+import { getData, legacySegment, paths } from "@/lib/data";
+
+export const getStaticPaths = (async () => {
+  const data = await getData();
+  const devices = [...data.devices.values()];
+  const slugs = new Set<string>();
+  return devices.flatMap((device) => {
+    const name = legacySegment(device.name, slugs);
+    return name ? [{ params: { name }, props: { to: paths.device(device) } }] : [];
+  });
+}) satisfies GetStaticPaths;
+---
+
+<Redirect to={Astro.props.to} />

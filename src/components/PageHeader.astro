@@ -1,0 +1,39 @@
+---
+interface Props {
+  /** Small label above the title, e.g. "Device". */
+  eyebrow?: string;
+  title: string;
+  /** Render the title in monospace (model numbers / filenames). */
+  mono?: boolean;
+  /** Show a copy-to-clipboard button for the title. */
+  copyable?: boolean;
+}
+
+const { eyebrow, title, mono = false, copyable = false } = Astro.props;
+---
+
+<div class="mb-6">
+  {eyebrow && <p class="mb-1 text-sm font-medium uppercase tracking-wide text-accent">{eyebrow}</p>}
+  <div class="flex flex-wrap items-start gap-3">
+    <h1
+      class:list={[
+        "min-w-0 font-bold tracking-tight break-words",
+        mono ? "font-mono text-2xl break-all sm:text-3xl" : "text-3xl sm:text-4xl",
+      ]}
+    >
+      {title}
+    </h1>
+    {
+      copyable && (
+        <button type="button" data-copy={title} class="btn-ghost mt-1 px-2.5 py-1 text-xs">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <rect x="9" y="9" width="12" height="12" rx="2" />
+            <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+          </svg>
+          <span data-copy-label>Copy</span>
+        </button>
+      )
+    }
+  </div>
+  <slot />
+</div>

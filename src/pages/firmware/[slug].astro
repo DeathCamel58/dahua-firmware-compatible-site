@@ -1,0 +1,160 @@
+---
+import type { GetStaticPaths } from "astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import Chips from "@/components/Chips.astro";
+import FirmwareList from "@/components/FirmwareList.astro";
+import PageHeader from "@/components/PageHeader.astro";
+import Redirect from "@/components/Redirect.astro";
+import Stats from "@/components/Stats.astro";
+import Warning from "@/components/Warning.astro";
+import { formatDate, getData, legacySegment, paths, relatedFirmwares, type Firmware } from "@/lib/data";
+import { plural } from "@/lib/site";
+
+export const getStaticPaths = (async () => {
+  const data = await getData();
+  const slugs = new Set(data.firmwareList.map((fw) => fw.slug));
+  return data.firmwareList.flatMap((fw) => {
+    const routes: { params: { slug: string }; props: { filename: string; redirect?: boolean } }[] = [
+      { params: { slug: fw.slug }, props: { filename: fw.filename } },
+    ];
+    const legacy = legacySegment(fw.filename, slugs);
+    if (legacy) routes.push({ params: { slug: legacy }, props: { filename: fw.filename, redirect: true } });
+    return routes;
+  });
+}) satisfies GetStaticPaths;
+
+const { filename, redirect } = Astro.props;
+const data = await getData();
+const fw = data.firmwares.get(filename)!;
+
+const date = formatDate(fw.buildDate);
+const devices = fw.devices.map((name) => data.devices.get(name)!);
+const amcrest = fw.amcrestModels.map((name) => data.amcrestModels.get(name)!);
+const related: Firmware[] = redirect ? [] : relatedFirmwares(data, fw);
+
+const highlights = devices
+  .filter((d) => !d.generic)
+  .slice(0, 3)
+  .map((d) => d.name);
+const compatibility =
+  devices.length > 0
+    ? `May be compatible with ${plural(devices.length, "device")}${highlights.length ? `, including ${highlights.join(", ")}` : ""}.`
+    : "No device compatibility data yet.";
+// Meta description names the file; the on-page summary doesn't repeat the H1.
+const description = `Download ${fw.displayName}${fw.vendor ? `, a ${fw.vendor} firmware` : ""}${date ? ` built ${date}` : ""}. ${compatibility}`;
+const summary = `${fw.vendor ? `${fw.vendor} firmware` : "Firmware"}${date ? ` built ${date}` : ""}. ${compatibility}`;
+
+const jsonLd = [
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: fw.displayName,
+    applicationCategory: "Firmware",
+    operatingSystem: "Embedded",
+    ...(fw.version ? { softwareVersion: fw.version } : {}),
+    ...(fw.buildDate ? { datePublished: fw.buildDate } : {}),
+    ...(fw.url ? { downloadUrl: fw.url } : {}),
+    ...(fw.vendor ? { publisher: { "@type": "Organization", name: fw.vendor.replace(/ \(.*\)$/, "") } } : {}),
+  },
+];
+---
+
+{
+  redirect ? (
+    <Redirect to={paths.firmware(fw)} />
+  ) : (
+    <BaseLayout
+      title={`${fw.displayName} download`}
+      description={description}
+      jsonLd={jsonLd}
+      breadcrumbs={[
+        { name: "Home", href: "/" },
+        { name: "Firmware", href: "/firmware/" },
+        { name: fw.displayName },
+      ]}
+    >
+      <PageHeader eyebrow="Firmware" title={fw.displayName} mono copyable>
+        <p class="mt-3 max-w-3xl text-muted">{summary}</p>
+      </PageHeader>
+
+      <Stats
+        stats={[
+          { label: "Build date", value: date },
+          { label: "Version", value: fw.version },
+          { label: "Compatible devices", value: devices.length },
+          { label: "Vendor", value: fw.vendor },
+        ]}
+      />
+
+      <section class="card mb-8 p-5" aria-labelledby="download-heading">
+        <h2 id="download-heading" class="section-title">Download</h2>
+        {fw.url ? (
+          <>
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <a href={fw.url} class="btn-primary self-start" rel="nofollow noopener">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path d="M12 3v12m0 0-5-5m5 5 5-5M4 21h16" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                Download firmware
+              </a>
+              {fw.host && <p class="text-sm text-muted">Hosted on <span class="font-mono">{fw.host}</span></p>}
+            </div>
+            <p class="mt-3 font-mono text-xs break-all text-muted">{fw.url}</p>
+          </>
+        ) : (
+          <p class="text-muted">No download link is known for this file.</p>
+        )}
+        <div class="mt-4">
+          <Warning>
+            Compatibility is detected automatically and may be wrong. Check that your device's{" "}
+            <code>updateSerial</code> matches before flashing. A wrong firmware can brick your device.
+          </Warning>
+        </div>
+      </section>
+
+      {fw.notes.length > 0 && (
+        <section class="mb-8" aria-labelledby="notes-heading">
+          <h2 id="notes-heading" class="section-title">Vendor notes</h2>
+          <ul class="card list-inside list-disc space-y-1 p-5 text-sm">
+            {fw.notes.map((note) => <li>{note}</li>)}
+          </ul>
+        </section>
+      )}
+
+      <section class="mb-8" aria-labelledby="devices-heading">
+        <h2 id="devices-heading" class="section-title">Compatible devices ({devices.length.toLocaleString("en-US")})</h2>
+        {devices.length > 0 ? (
+          <>
+            <Chips items={devices.map((d) => ({ name: d.name, href: paths.device(d) }))} />
+            {devices.some((d) => d.generic) && (
+              <p class="mt-3 text-sm text-muted">
+                Generic identifiers such as <code>DAHUA</code> mean the file only names the vendor, not specific
+                models.
+              </p>
+            )}
+          </>
+        ) : (
+          <p class="text-muted">
+            No device list has been extracted from this file yet. If you know which devices it supports, please get in
+            touch.
+          </p>
+        )}
+      </section>
+
+      {amcrest.length > 0 && (
+        <section class="mb-8" aria-labelledby="amcrest-heading">
+          <h2 id="amcrest-heading" class="section-title">Amcrest models listed for this file</h2>
+          <Chips items={amcrest.map((m) => ({ name: m.name, href: paths.amcrest(m) }))} />
+        </section>
+      )}
+
+      {related.length > 0 && (
+        <section aria-labelledby="related-heading">
+          <h2 id="related-heading" class="section-title">Related firmware</h2>
+          <p class="mb-3 text-sm text-muted">Other files that list many of the same devices.</p>
+          <FirmwareList firmwares={related} showDownload={false} />
+        </section>
+      )}
+    </BaseLayout>
+  )
+}

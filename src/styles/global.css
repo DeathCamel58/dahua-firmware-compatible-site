@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
+
+  /* Semantic colours. Dark mode values live in the media query below. */
+  --color-bg: #f7f8fa;
+  --color-surface: #ffffff;
+  --color-surface-2: #f0f2f5;
+  --color-border: #e1e5eb;
+  --color-fg: #14181f;
+  --color-muted: #5b6573;
+  --color-accent: #0b6bcb;
+  --color-accent-fg: #ffffff;
+  --color-accent-soft: #e6f0fb;
+  --color-warn: #8a5a00;
+  --color-warn-soft: #fff5e0;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #0d1117;
+    --color-surface: #151b23;
+    --color-surface-2: #1c232d;
+    --color-border: #2a333f;
+    --color-fg: #e6eaf0;
+    --color-muted: #97a1ae;
+    --color-accent: #5aa9f5;
+    --color-accent-fg: #06121f;
+    --color-accent-soft: #132639;
+    --color-warn: #f2c06b;
+    --color-warn-soft: #2a2110;
+  }
+}
+
+@layer base {
+  html {
+    color-scheme: light dark;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-bg text-fg font-sans antialiased;
+  }
+  a {
+    @apply text-accent underline-offset-2 hover:underline;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-accent;
+  }
+  code {
+    @apply font-mono text-[0.9em];
+  }
+}
+
+@utility card {
+  @apply rounded-xl border border-border bg-surface;
+}
+@utility chip {
+  @apply inline-flex items-center rounded-md border border-border bg-surface-2 px-2 py-0.5 font-mono text-sm text-fg no-underline hover:border-accent hover:text-accent hover:no-underline;
+}
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 font-medium no-underline transition-colors hover:no-underline;
+}
+@utility btn-primary {
+  @apply btn bg-accent text-accent-fg hover:opacity-90;
+}
+@utility btn-ghost {
+  @apply btn border border-border bg-surface text-fg hover:border-accent hover:text-accent;
+}
+@utility section-title {
+  @apply mb-3 text-lg font-semibold;
+}

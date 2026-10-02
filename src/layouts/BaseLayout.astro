@@ -1,0 +1,92 @@
+---
+import "@/styles/global.css";
+import Header from "@/components/Header.astro";
+import Footer from "@/components/Footer.astro";
+import Breadcrumbs, { type Crumb } from "@/components/Breadcrumbs.astro";
+import { SITE_NAME } from "@/lib/site";
+
+interface Props {
+  /** Page-specific title; the site name is appended automatically. */
+  title: string;
+  description: string;
+  breadcrumbs?: Crumb[];
+  /** Extra JSON-LD objects for this page. */
+  jsonLd?: Record<string, unknown>[];
+  noindex?: boolean;
+  /** Hide the header search (e.g. on pages that render their own big search box). */
+  hideHeaderSearch?: boolean;
+}
+
+const { title, description, breadcrumbs, jsonLd = [], noindex = false, hideHeaderSearch = false } = Astro.props;
+const fullTitle = title === SITE_NAME ? title : `${title} | ${SITE_NAME}`;
+const canonical = new URL(Astro.url.pathname, Astro.site).href;
+
+const structuredData = [...jsonLd];
+if (breadcrumbs && breadcrumbs.length > 0) {
+  structuredData.push({
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: breadcrumbs.map((crumb, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: crumb.name,
+      ...(crumb.href ? { item: new URL(crumb.href, Astro.site).href } : {}),
+    })),
+  });
+}
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    {noindex && <meta name="robots" content="noindex, follow" />}
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+    <meta name="theme-color" content="#f7f8fa" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0d1117" media="(prefers-color-scheme: dark)" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={SITE_NAME} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta name="twitter:card" content="summary" />
+
+    {structuredData.map((data) => <script type="application/ld+json" set:html={JSON.stringify(data)} />)}
+  </head>
+  <body class="flex min-h-screen flex-col">
+    <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 btn-primary">
+      Skip to content
+    </a>
+    <Header hideSearch={hideHeaderSearch} />
+    <main id="main" class="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
+      {breadcrumbs && <Breadcrumbs crumbs={breadcrumbs} />}
+      <slot />
+    </main>
+    <Footer />
+  </body>
+</html>
+
+<script>
+  // Copy-to-clipboard buttons: <button data-copy="text">
+  document.addEventListener("click", async (event) => {
+    const button = (event.target as Element).closest<HTMLButtonElement>("[data-copy]");
+    if (!button) return;
+    try {
+      await navigator.clipboard.writeText(button.dataset.copy ?? "");
+      const label = button.querySelector("[data-copy-label]");
+      if (label) {
+        const original = label.textContent;
+        label.textContent = "Copied";
+        setTimeout(() => (label.textContent = original), 1500);
+      }
+    } catch {
+      // Clipboard unavailable (insecure context / permissions); nothing to do.
+    }
+  });
+</script>

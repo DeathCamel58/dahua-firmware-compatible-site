@@ -1,0 +1,66 @@
+---
+import type { GetStaticPaths } from "astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import PageHeader from "@/components/PageHeader.astro";
+import { formatDate, getData, paths } from "@/lib/data";
+import { plural } from "@/lib/site";
+
+export const getStaticPaths = (async () => {
+  const data = await getData();
+  return [...data.families.entries()].map(([key, family]) => ({
+    params: { family: family.slug },
+    props: { key },
+  }));
+}) satisfies GetStaticPaths;
+
+const data = await getData();
+const family = data.families.get(Astro.props.key)!;
+const devices = family.devices.map((name) => {
+  const device = data.devices.get(name)!;
+  const newest = device.firmwares.map((f) => data.firmwares.get(f)!).find((fw) => fw.buildDate);
+  return { device, newest: formatDate(newest?.buildDate ?? null) };
+});
+
+const isOther = family.name === "Other";
+const title = isOther ? "Other Dahua devices" : `${family.name} series firmware`;
+const description = isOther
+  ? `${plural(devices.length, "less common Dahua device ID")} with firmware that may be compatible.`
+  : `Firmware for ${plural(devices.length, "Dahua " + family.name + " model")}, e.g. ${family.devices.slice(0, 3).join(", ")}. See which firmware files may be compatible with each.`;
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  breadcrumbs={[{ name: "Home", href: "/" }, { name: "Devices", href: "/device/" }, { name: family.name }]}
+>
+  <PageHeader eyebrow="Device family" title={isOther ? "Other devices" : family.name} mono={!isOther}>
+    <p class="mt-3 max-w-3xl text-muted">{description}</p>
+  </PageHeader>
+
+  <div class="card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-surface-2 text-left text-xs text-muted">
+        <tr>
+          <th scope="col" class="px-4 py-2 font-medium">Model</th>
+          <th scope="col" class="px-4 py-2 text-right font-medium">Firmware files</th>
+          <th scope="col" class="hidden px-4 py-2 text-right font-medium sm:table-cell">Newest build</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-border">
+        {
+          devices.map(({ device, newest }) => (
+            <tr class="hover:bg-surface-2">
+              <td class="px-4 py-2">
+                <a href={paths.device(device)} class="font-mono break-all">
+                  {device.name}
+                </a>
+              </td>
+              <td class="px-4 py-2 text-right tabular-nums">{device.firmwares.length}</td>
+              <td class="hidden px-4 py-2 text-right text-muted tabular-nums sm:table-cell">{newest ?? "—"}</td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </div>
+</BaseLayout>

@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Dahua Firmware Finder
 
-## Getting Started
+Source for [dahua.randomcpu.com](https://dahua.randomcpu.com). It's a static site that shows which firmware files may be compatible with Dahua-made devices, including Amcrest and Lorex.
 
-First, run the development server:
+The site is built with [Astro](https://astro.build) and deployed to GitHub Pages.
+
+## Data
+
+At build time the site fetches two files from [amcrest-compatible-finder](https://github.com/DeathCamel58/amcrest-compatible-finder):
+
+- `firmware_compatible.json`: firmware filename → device IDs found in the file
+- `cameras.json`: firmware filename → download URL, notes and Amcrest model names
+
+`src/lib/data.ts` loads both files once per build. It normalizes them into firmwares, devices, device families and Amcrest models, and gives each one a stable URL slug. The parsing of vendor, version and build date from filenames lives in `src/lib/parseFirmware.ts`.
+
+## Pages
+
+| Route | Content |
+| --- | --- |
+| `/firmware/<slug>/` | One page per firmware file |
+| `/device/<slug>/` | One page per device ID |
+| `/amcrest/<slug>/` | One page per Amcrest model |
+| `/device/family/<slug>/`, `/firmware/year/<year>/` | Browse hubs |
+| `/search/` | Client-side search |
+| `/search-index.json` | Search index, generated at build time |
+| `/camera/<Name>/`, `/firmware/<Raw_Name>/` | Redirect stubs for URLs from the old Next.js site |
+
+Search runs entirely in the browser. The index (about 60 KB gzipped) is only downloaded once someone focuses a search box.
+
+## Development
+
+Requires Node 22.12 or newer.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev      # http://localhost:4321
+npm run build    # outputs to dist/
+npm run preview
+npm run check    # type-check
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+To build against local copies of the JSON files instead of fetching them, set `DATA_DIR`:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+DATA_DIR=/path/to/amcrest-compatible-finder npm run build
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+## Deployment
 
-## Learn More
+`.github/workflows/deploy.yml` builds and deploys the site:
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+- on every push to `main`
+- once a day, to pick up data changes
+- on demand, via a `data-updated` repository dispatch

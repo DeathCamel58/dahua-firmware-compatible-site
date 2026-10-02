@@ -1,0 +1,90 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import Search from "@/components/Search.astro";
+---
+
+<BaseLayout
+  title="Search"
+  description="Search Dahua device IDs, Amcrest models and firmware files."
+  noindex
+  hideHeaderSearch
+  breadcrumbs={[{ name: "Home", href: "/" }, { name: "Search" }]}
+>
+  <h1 class="mb-4 text-3xl font-bold">Search</h1>
+  <Search id="page-search" autofocus suggest={false} />
+
+  <div id="search-results" class="mt-8" aria-live="polite"></div>
+
+  <noscript>
+    <p class="mt-8 text-muted">
+      Search needs JavaScript. You can still browse <a href="/device/">devices</a>,
+      <a href="/firmware/">firmware</a> and <a href="/amcrest/">Amcrest models</a>.
+    </p>
+  </noscript>
+</BaseLayout>
+
+<script>
+  import { TYPE_AMCREST, TYPE_DEVICE, TYPE_FIRMWARE, loadIndex, search, type EntryType } from "@/scripts/search-core";
+  import { renderResultRow } from "@/scripts/search-box";
+
+  const container = document.getElementById("search-results")!;
+  const input = document.getElementById("page-search") as HTMLInputElement;
+  const groups: { type: EntryType; title: string }[] = [
+    { type: TYPE_DEVICE, title: "Devices" },
+    { type: TYPE_AMCREST, title: "Amcrest models" },
+    { type: TYPE_FIRMWARE, title: "Firmware" },
+  ];
+
+  const message = (text: string) => {
+    const p = document.createElement("p");
+    p.className = "text-muted";
+    p.textContent = text;
+    container.replaceChildren(p);
+  };
+
+  async function render(query: string) {
+    document.title = query ? `“${query}” · Search | Dahua Firmware Finder` : "Search | Dahua Firmware Finder";
+    if (!query.trim()) return container.replaceChildren();
+
+    let results;
+    try {
+      results = search(await loadIndex(), query, 300);
+    } catch {
+      return message("Couldn't load the search index. Please refresh and try again.");
+    }
+    if (results.length === 0) {
+      return message(`No results for “${query}”. Try a shorter part of the model number, e.g. IPC-HDW2431.`);
+    }
+
+    const sections = groups.flatMap(({ type, title }) => {
+      const matches = results.filter((r) => r.type === type);
+      if (matches.length === 0) return [];
+      const section = document.createElement("section");
+      section.className = "mb-8";
+      const heading = document.createElement("h2");
+      heading.className = "section-title";
+      heading.textContent = `${title} (${matches.length}${matches.length >= 100 ? "+" : ""})`;
+      const list = document.createElement("div");
+      list.className = "card divide-y divide-border p-1";
+      list.append(...matches.slice(0, 100).map((result) => renderResultRow(result)));
+      section.append(heading, list);
+      return [section];
+    });
+    container.replaceChildren(...sections);
+  }
+
+  const initial = new URLSearchParams(location.search).get("q") ?? "";
+  input.value = initial;
+  render(initial);
+
+  // Keep results and the URL in sync while typing on this page.
+  let timer: ReturnType<typeof setTimeout>;
+  input.addEventListener("input", () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      const query = input.value.trim();
+      history.replaceState(null, "", query ? `?q=${encodeURIComponent(query)}` : location.pathname);
+      render(query);
+    }, 150);
+  });
+</script>

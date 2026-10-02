@@ -1,0 +1,23 @@
+---
+/** Minimal page for legacy URLs: points browsers and crawlers at the new location. */
+interface Props {
+  to: string;
+}
+
+const { to } = Astro.props;
+const canonical = new URL(to, Astro.site).href;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Moved</title>
+    <link rel="canonical" href={canonical} />
+    <meta name="robots" content="noindex, follow" />
+    <meta http-equiv="refresh" content={`0; url=${to}`} />
+  </head>
+  <body>
+    <p>This page has moved to <a href={to}>{canonical}</a>.</p>
+  </body>
+</html>

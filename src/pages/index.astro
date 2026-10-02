@@ -1,0 +1,136 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import Chips from "@/components/Chips.astro";
+import FirmwareList from "@/components/FirmwareList.astro";
+import Search from "@/components/Search.astro";
+import Warning from "@/components/Warning.astro";
+import { getData, paths } from "@/lib/data";
+import { CONTACT_URL, SITE_NAME, SITE_TAGLINE, plural } from "@/lib/site";
+
+const data = await getData();
+const newest = data.firmwareList.slice(0, 6);
+const topFamilies = [...data.families.values()]
+  .filter((f) => f.name !== "Other")
+  .sort((a, b) => b.devices.length - a.devices.length)
+  .slice(0, 12);
+
+const stats = [
+  { value: data.firmwareList.length, label: "firmware files" },
+  { value: data.devices.size, label: "device IDs" },
+  { value: data.amcrestModels.size, label: "Amcrest models" },
+];
+
+const infoUrls = [
+  "http://<IP_ADDRESS>/cgi-bin/magicBox.cgi?action=getSystemInfoNew",
+  "http://<IP_ADDRESS>/cgi-bin/magicBox.cgi?action=getSystemInfo",
+];
+
+const jsonLd = [
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: SITE_NAME,
+    url: Astro.site?.href,
+    description: SITE_TAGLINE,
+  },
+];
+---
+
+<BaseLayout
+  title={SITE_NAME}
+  description={`${SITE_TAGLINE}. Search ${plural(data.firmwareList.length, "firmware file")} and ${plural(data.devices.size, "device ID")}, with direct download links.`}
+  jsonLd={jsonLd}
+  hideHeaderSearch
+>
+  <section class="mx-auto max-w-3xl py-6 text-center sm:py-12">
+    <h1 class="text-3xl font-bold tracking-tight text-balance sm:text-5xl">Find firmware for your Dahua device</h1>
+    <p class="mt-4 text-lg text-muted text-balance">
+      Look up which firmware files may be compatible with your Dahua, Amcrest or Lorex camera, NVR or DVR, then
+      download them directly.
+    </p>
+    <div class="mt-8 text-left">
+      <Search id="hero-search" />
+    </div>
+    <dl class="mt-8 flex flex-wrap justify-center gap-x-8 gap-y-2 text-sm text-muted">
+      {
+        stats.map((stat) => (
+          <div class="flex items-baseline gap-1.5">
+            <dt class="sr-only">{stat.label}</dt>
+            <dd class="text-xl font-semibold text-fg tabular-nums">{stat.value.toLocaleString("en-US")}</dd>
+            <span aria-hidden="true">{stat.label}</span>
+          </div>
+        ))
+      }
+    </dl>
+  </section>
+
+  <section id="how-to" class="scroll-mt-24 py-8" aria-labelledby="how-to-heading">
+    <h2 id="how-to-heading" class="mb-6 text-2xl font-bold">How to find the right firmware</h2>
+    <ol class="grid gap-4 md:grid-cols-3">
+      <li class="card p-5">
+        <span class="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-sm font-bold text-accent-fg">1</span>
+        <h3 class="mt-3 font-semibold">Get your device's <code>updateSerial</code></h3>
+        <p class="mt-2 text-sm text-muted">Open one of these URLs in a browser and log in. Note the <code>updateSerial</code> value.</p>
+        <ul class="mt-3 space-y-2">
+          {
+            infoUrls.map((url) => (
+              <li class="flex items-center gap-2 rounded-md bg-surface-2 p-2">
+                <code class="min-w-0 flex-1 text-xs break-all">{url}</code>
+                <button type="button" data-copy={url} class="btn-ghost shrink-0 px-2 py-1 text-xs" aria-label="Copy URL">
+                  <span data-copy-label>Copy</span>
+                </button>
+              </li>
+            ))
+          }
+        </ul>
+      </li>
+      <li class="card p-5">
+        <span class="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-sm font-bold text-accent-fg">2</span>
+        <h3 class="mt-3 font-semibold">Search for it</h3>
+        <p class="mt-2 text-sm text-muted">
+          Type the <code>updateSerial</code> (or your Amcrest model) into the search box above. If there's no exact match,
+          try a shorter prefix such as <code>IPC-HDW2431</code>, or <a href="/device/">browse device families</a>.
+        </p>
+      </li>
+      <li class="card p-5">
+        <span class="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-sm font-bold text-accent-fg">3</span>
+        <h3 class="mt-3 font-semibold">Download and verify</h3>
+        <p class="mt-2 text-sm text-muted">
+          Device pages list compatible firmware newest first, with a direct download link. Check the notes before
+          flashing.
+        </p>
+      </li>
+    </ol>
+    <div class="mt-6">
+      <Warning>
+        Every firmware update you make is at your own risk. Neither this site nor the vendor that publishes the firmware
+        is responsible for any damage. These lists are generated automatically and can contain mistakes.
+      </Warning>
+    </div>
+  </section>
+
+  <section class="py-8" aria-labelledby="families-heading">
+    <div class="mb-4 flex items-baseline justify-between gap-4">
+      <h2 id="families-heading" class="text-2xl font-bold">Popular device families</h2>
+      <a href="/device/" class="text-sm">All families →</a>
+    </div>
+    <Chips items={topFamilies.map((f) => ({ name: f.name, href: paths.family(f) }))} />
+  </section>
+
+  <section class="py-8" aria-labelledby="newest-heading">
+    <div class="mb-4 flex items-baseline justify-between gap-4">
+      <h2 id="newest-heading" class="text-2xl font-bold">Newest firmware</h2>
+      <a href="/firmware/" class="text-sm">All firmware →</a>
+    </div>
+    <FirmwareList firmwares={newest} />
+  </section>
+
+  <section class="py-8" aria-labelledby="help-heading">
+    <h2 id="help-heading" class="mb-3 text-2xl font-bold">Help improve the data</h2>
+    <p class="max-w-3xl text-muted">
+      Compatibility is extracted from firmware files automatically (with tools like <code>binwalk</code>), and many
+      files still can't be parsed. If you know how to work out which devices a firmware supports, or you've found a
+      mistake, please <a href={CONTACT_URL} rel="noopener">get in touch on IPCamTalk</a>.
+    </p>
+  </section>
+</BaseLayout>

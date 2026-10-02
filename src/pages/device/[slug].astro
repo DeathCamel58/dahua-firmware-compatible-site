@@ -1,0 +1,99 @@
+---
+import type { GetStaticPaths } from "astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import Chips from "@/components/Chips.astro";
+import FirmwareList from "@/components/FirmwareList.astro";
+import PageHeader from "@/components/PageHeader.astro";
+import Stats from "@/components/Stats.astro";
+import Warning from "@/components/Warning.astro";
+import { collect, formatDate, getData, paths, similarDevices } from "@/lib/data";
+import { plural } from "@/lib/site";
+
+export const getStaticPaths = (async () => {
+  const data = await getData();
+  return [...data.devices.values()].map((device) => ({
+    params: { slug: device.slug },
+    props: { name: device.name },
+  }));
+}) satisfies GetStaticPaths;
+
+const data = await getData();
+const device = data.devices.get(Astro.props.name)!;
+const firmwares = device.firmwares.map((filename) => data.firmwares.get(filename)!);
+const newest = firmwares.find((fw) => fw.buildDate);
+const similar = similarDevices(data, device);
+const amcrest = collect(data, device.firmwares, (fw) => fw.amcrestModels)
+  .slice(0, 24)
+  .map((name) => data.amcrestModels.get(name)!);
+
+const description =
+  `Firmware that may be compatible with the ${device.name}: ${plural(firmwares.length, "file")}` +
+  (newest ? `, newest built ${formatDate(newest.buildDate)}` : "") +
+  ". Direct download links and compatibility details.";
+---
+
+<BaseLayout
+  title={`${device.name} firmware downloads`}
+  description={description}
+  breadcrumbs={[
+    { name: "Home", href: "/" },
+    { name: "Devices", href: "/device/" },
+    { name: device.family, href: paths.family({ slug: device.familySlug }) },
+    { name: device.name },
+  ]}
+>
+  <PageHeader eyebrow="Device" title={device.name} mono copyable>
+    <p class="mt-3 max-w-3xl text-muted">
+      {plural(firmwares.length, "firmware file")} may be compatible with the <strong class="text-fg">{device.name}</strong>.
+      Part of the <a href={paths.family({ slug: device.familySlug })}>{device.family}</a> family. The newest builds are
+      listed first.
+    </p>
+  </PageHeader>
+
+  <Stats
+    stats={[
+      { label: "Firmware files", value: firmwares.length },
+      { label: "Newest build", value: formatDate(newest?.buildDate ?? null) },
+      { label: "Family", value: device.family },
+      { label: "Similar devices", value: similar.length || null },
+    ]}
+  />
+
+  {
+    device.generic && (
+      <div class="mb-6">
+        <Warning title="Generic identifier">
+          <code>{device.name}</code> is a generic tag found inside many firmware files, not a specific model. Search
+          for your exact model instead.
+        </Warning>
+      </div>
+    )
+  }
+
+  <section class="mb-8" aria-labelledby="firmware-heading">
+    <h2 id="firmware-heading" class="section-title">Compatible firmware</h2>
+    <FirmwareList firmwares={firmwares} />
+    <p class="mt-3 text-sm text-muted">
+      Compatibility is detected automatically from firmware files and may be incomplete or wrong. Always confirm your
+      device's <code>updateSerial</code> first.
+    </p>
+  </section>
+
+  {
+    similar.length > 0 && (
+      <section class="mb-8" aria-labelledby="similar-heading">
+        <h2 id="similar-heading" class="section-title">Devices sharing firmware with the {device.name}</h2>
+        <Chips items={similar.map((d) => ({ name: d.name, href: paths.device(d) }))} />
+      </section>
+    )
+  }
+
+  {
+    amcrest.length > 0 && (
+      <section aria-labelledby="amcrest-heading">
+        <h2 id="amcrest-heading" class="section-title">Amcrest models using the same firmware</h2>
+        <Chips items={amcrest.map((m) => ({ name: m.name, href: paths.amcrest(m) }))} />
+      </section>
+    )
+  }
+</BaseLayout>

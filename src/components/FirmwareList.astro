@@ -1,0 +1,48 @@
+---
+import { formatDate, paths, type Firmware } from "@/lib/data";
+import { plural } from "@/lib/site";
+
+interface Props {
+  firmwares: Firmware[];
+  /** Show a direct download button on each row. */
+  showDownload?: boolean;
+}
+
+const { firmwares, showDownload = true } = Astro.props;
+---
+
+<ul class="card divide-y divide-border">
+  {
+    firmwares.map((fw) => {
+      const meta = [
+        fw.buildDate && `Built ${formatDate(fw.buildDate)}`,
+        fw.version && `v${fw.version}`,
+        fw.devices.length > 0 ? plural(fw.devices.length, "device") : "No compatibility data",
+        fw.vendor,
+      ].filter(Boolean);
+      return (
+        <li class="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:gap-4">
+          <div class="min-w-0 flex-1">
+            <a href={paths.firmware(fw)} class="font-mono text-sm break-all">
+              {fw.displayName}
+            </a>
+            <p class="mt-1 text-xs text-muted">{meta.join(" · ")}</p>
+          </div>
+          {showDownload && fw.url && (
+            <a
+              href={fw.url}
+              class="btn-ghost shrink-0 self-start px-3 py-1.5 text-sm sm:self-center"
+              rel="nofollow noopener"
+              aria-label={`Download ${fw.displayName}`}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M12 3v12m0 0-5-5m5 5 5-5M4 21h16" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              Download
+            </a>
+          )}
+        </li>
+      );
+    })
+  }
+</ul>

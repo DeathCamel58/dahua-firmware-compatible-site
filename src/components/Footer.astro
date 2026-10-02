@@ -1,0 +1,32 @@
+---
+import { CONTACT_URL, DATA_REPO_URL, SITE_NAME, SITE_REPO_URL, nav } from "@/lib/site";
+
+const buildDate = new Date().toISOString().slice(0, 10);
+---
+
+<footer class="mt-12 border-t border-border bg-surface">
+  <div class="mx-auto grid max-w-6xl gap-8 px-4 py-8 text-sm text-muted sm:grid-cols-3 sm:px-6">
+    <div>
+      <p class="font-semibold text-fg">{SITE_NAME}</p>
+      <p class="mt-2">
+        An independent, automatically generated index. It is not affiliated with Dahua, Amcrest or Lorex. Flashing
+        firmware is at your own risk.
+      </p>
+    </div>
+    <nav aria-label="Footer">
+      <p class="font-semibold text-fg">Browse</p>
+      <ul class="mt-2 space-y-1">
+        {nav.map((item) => <li><a href={item.href}>{item.name}</a></li>)}
+      </ul>
+    </nav>
+    <div>
+      <p class="font-semibold text-fg">Project</p>
+      <ul class="mt-2 space-y-1">
+        <li><a href={DATA_REPO_URL} rel="noopener">Data source</a></li>
+        <li><a href={SITE_REPO_URL} rel="noopener">Site source</a></li>
+        <li><a href={CONTACT_URL} rel="noopener">Contact on IPCamTalk</a></li>
+      </ul>
+      <p class="mt-4 text-xs">Data updated {buildDate}</p>
+    </div>
+  </div>
+</footer>
