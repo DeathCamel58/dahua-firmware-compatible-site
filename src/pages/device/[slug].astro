@@ -22,9 +22,9 @@ const device = data.devices.get(Astro.props.name)!;
 const firmwares = device.firmwares.map((filename) => data.firmwares.get(filename)!);
 const newest = firmwares.find((fw) => fw.buildDate);
 const similar = similarDevices(data, device);
-const amcrest = collect(data, device.firmwares, (fw) => fw.amcrestModels)
+const models = collect(data, device.firmwares, (fw) => fw.models)
   .slice(0, 24)
-  .map((name) => data.amcrestModels.get(name)!);
+  .map((name) => data.models.get(name)!);
 
 const description =
   `Firmware that may be compatible with the ${device.name}: ${plural(firmwares.length, "file")}` +
@@ -89,10 +89,10 @@ const description =
   }
 
   {
-    amcrest.length > 0 && (
-      <section aria-labelledby="amcrest-heading">
-        <h2 id="amcrest-heading" class="section-title">Amcrest models using the same firmware</h2>
-        <Chips items={amcrest.map((m) => ({ name: m.name, href: paths.amcrest(m) }))} />
+    models.length > 0 && (
+      <section aria-labelledby="models-heading">
+        <h2 id="models-heading" class="section-title">Retail models using the same firmware</h2>
+        <Chips items={models.map((m) => ({ name: m.name, href: paths.model(m) }))} />
       </section>
     )
   }

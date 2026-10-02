@@ -5,7 +5,7 @@ import Search from "@/components/Search.astro";
 
 <BaseLayout
   title="Search"
-  description="Search Dahua device IDs, Amcrest models and firmware files."
+  description="Search Dahua device IDs, retail models and firmware files."
   noindex
   hideHeaderSearch
   breadcrumbs={[{ name: "Home", href: "/" }, { name: "Search" }]}
@@ -18,20 +18,20 @@ import Search from "@/components/Search.astro";
   <noscript>
     <p class="mt-8 text-muted">
       Search needs JavaScript. You can still browse <a href="/device/">devices</a>,
-      <a href="/firmware/">firmware</a> and <a href="/amcrest/">Amcrest models</a>.
+      <a href="/firmware/">firmware</a> and <a href="/model/">retail models</a>.
     </p>
   </noscript>
 </BaseLayout>
 
 <script>
-  import { TYPE_AMCREST, TYPE_DEVICE, TYPE_FIRMWARE, loadIndex, search, type EntryType } from "@/scripts/search-core";
+  import { TYPE_DEVICE, TYPE_FIRMWARE, TYPE_MODEL, loadIndex, search, type EntryType } from "@/scripts/search-core";
   import { renderResultRow } from "@/scripts/search-box";
 
   const container = document.getElementById("search-results")!;
   const input = document.getElementById("page-search") as HTMLInputElement;
   const groups: { type: EntryType; title: string }[] = [
     { type: TYPE_DEVICE, title: "Devices" },
-    { type: TYPE_AMCREST, title: "Amcrest models" },
+    { type: TYPE_MODEL, title: "Retail models" },
     { type: TYPE_FIRMWARE, title: "Firmware" },
   ];
 

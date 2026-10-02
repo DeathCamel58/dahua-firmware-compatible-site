@@ -5,19 +5,19 @@ import Chips from "@/components/Chips.astro";
 import FirmwareList from "@/components/FirmwareList.astro";
 import PageHeader from "@/components/PageHeader.astro";
 import Stats from "@/components/Stats.astro";
-import { collect, formatDate, getData, paths } from "@/lib/data";
+import { brandName, collect, formatDate, getData, paths } from "@/lib/data";
 import { plural } from "@/lib/site";
 
 export const getStaticPaths = (async () => {
   const data = await getData();
-  return [...data.amcrestModels.values()].map((model) => ({
+  return [...data.models.values()].map((model) => ({
     params: { slug: model.slug },
     props: { name: model.name },
   }));
 }) satisfies GetStaticPaths;
 
 const data = await getData();
-const model = data.amcrestModels.get(Astro.props.name)!;
+const model = data.models.get(Astro.props.name)!;
 const firmwares = model.firmwares.map((filename) => data.firmwares.get(filename)!);
 const newest = firmwares.find((fw) => fw.buildDate);
 const notes = collect(data, model.firmwares, (fw) => fw.notes);
@@ -26,25 +26,27 @@ const devices = collect(data, model.firmwares, (fw) => fw.devices)
   .filter((d) => !d.generic)
   .slice(0, 48);
 
+// Prefix the brand when the model is only listed by one, e.g. "Amcrest IP8M-2493EW-AI-V3".
+const brand = model.publishers.length === 1 ? brandName(model.publishers[0]) : null;
+const fullName = brand && !model.name.toUpperCase().startsWith(brand.toUpperCase()) ? `${brand} ${model.name}` : model.name;
+const listedBy = model.publishers.length > 0 ? model.publishers.join(" and ") : "Its download source";
+
 const description =
-  `Amcrest ${model.name} firmware: ${plural(firmwares.length, "file")}` +
+  `${fullName} firmware: ${plural(firmwares.length, "file")}` +
   (newest ? `, newest built ${formatDate(newest.buildDate)}` : "") +
   ". Download links plus the Dahua device IDs the same firmware supports.";
 ---
 
 <BaseLayout
-  title={`Amcrest ${model.name} firmware`}
+  title={`${fullName} firmware`}
   description={description}
-  breadcrumbs={[
-    { name: "Home", href: "/" },
-    { name: "Amcrest models", href: "/amcrest/" },
-    { name: model.name },
-  ]}
+  breadcrumbs={[{ name: "Home", href: "/" }, { name: "Retail models", href: "/model/" }, { name: model.name }]}
 >
-  <PageHeader eyebrow="Amcrest model" title={model.name} mono copyable>
+  <PageHeader eyebrow={brand ? `${brand} model` : "Retail model"} title={model.name} mono copyable>
     <p class="mt-3 max-w-3xl text-muted">
-      Amcrest lists {plural(firmwares.length, "firmware file")} for the <strong class="text-fg">{model.name}</strong>.
-      Amcrest devices are made by Dahua, so the Dahua device IDs below can help you find more firmware.
+      {listedBy} lists {plural(firmwares.length, "firmware file")} for the <strong class="text-fg">{model.name}</strong>.
+      This is the retail model name. Inside the firmware, Dahua uses its own device IDs, listed below, which can lead you
+      to more compatible firmware.
     </p>
   </PageHeader>
 
@@ -52,6 +54,7 @@ const description =
     stats={[
       { label: "Firmware files", value: firmwares.length },
       { label: "Newest build", value: formatDate(newest?.buildDate ?? null) },
+      { label: "Listed by", value: model.publishers.map(brandName).join(", ") || null },
       { label: "Dahua device IDs", value: devices.length || null },
     ]}
   />
@@ -59,7 +62,7 @@ const description =
   {
     notes.length > 0 && (
       <section class="mb-8" aria-labelledby="notes-heading">
-        <h2 id="notes-heading" class="section-title">Amcrest notes</h2>
+        <h2 id="notes-heading" class="section-title">Vendor notes</h2>
         <ul class="card list-inside list-disc space-y-1 p-5 text-sm">
           {notes.map((note) => <li>{note}</li>)}
         </ul>
@@ -77,7 +80,7 @@ const description =
       <section aria-labelledby="devices-heading">
         <h2 id="devices-heading" class="section-title">Dahua device IDs in this firmware</h2>
         <p class="mb-3 text-sm text-muted">
-          Compare these with the <code>updateSerial</code> your camera reports. Each one links to every firmware found
+          Compare these with the <code>updateSerial</code> your device reports. Each one links to every firmware found
           for that ID.
         </p>
         <Chips items={devices.map((d) => ({ name: d.name, href: paths.device(d) }))} />

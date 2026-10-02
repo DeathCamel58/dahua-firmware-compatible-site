@@ -8,18 +8,18 @@ export type IndexEntry = [type: EntryType, name: string, slug: string, meta: str
 export type EntryType = 0 | 1 | 2;
 
 export const TYPE_DEVICE = 0;
-export const TYPE_AMCREST = 1;
+export const TYPE_MODEL = 1;
 export const TYPE_FIRMWARE = 2;
 
 export const TYPE_LABELS: Record<EntryType, string> = {
   0: "Device",
-  1: "Amcrest model",
+  1: "Retail model",
   2: "Firmware",
 };
 
 const TYPE_PATHS: Record<EntryType, string> = {
   0: "/device/",
-  1: "/amcrest/",
+  1: "/model/",
   2: "/firmware/",
 };
 

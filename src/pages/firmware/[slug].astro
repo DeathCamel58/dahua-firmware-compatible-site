@@ -29,7 +29,7 @@ const fw = data.firmwares.get(filename)!;
 
 const date = formatDate(fw.buildDate);
 const devices = fw.devices.map((name) => data.devices.get(name)!);
-const amcrest = fw.amcrestModels.map((name) => data.amcrestModels.get(name)!);
+const models = fw.models.map((name) => data.models.get(name)!);
 const related: Firmware[] = redirect ? [] : relatedFirmwares(data, fw);
 
 const highlights = devices.filter((d) => !d.generic).map((d) => d.name);
@@ -142,10 +142,10 @@ const jsonLd = [
         )}
       </section>
 
-      {amcrest.length > 0 && (
-        <section class="mb-8" aria-labelledby="amcrest-heading">
-          <h2 id="amcrest-heading" class="section-title">Amcrest models listed for this file</h2>
-          <Chips items={amcrest.map((m) => ({ name: m.name, href: paths.amcrest(m) }))} />
+      {models.length > 0 && (
+        <section class="mb-8" aria-labelledby="models-heading">
+          <h2 id="models-heading" class="section-title">Retail models listed for this file</h2>
+          <Chips items={models.map((m) => ({ name: m.name, href: paths.model(m) }))} />
         </section>
       )}
 

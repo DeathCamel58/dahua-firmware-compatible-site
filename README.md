@@ -9,9 +9,9 @@ The site is built with [Astro](https://astro.build) and deployed to GitHub Pages
 At build time the site fetches two files from [amcrest-compatible-finder](https://github.com/DeathCamel58/amcrest-compatible-finder):
 
 - `firmware_compatible.json`: firmware filename → device IDs found in the file
-- `cameras.json`: firmware filename → download URL, notes and Amcrest model names
+- `cameras.json`: firmware filename → download URL, notes and retail model names
 
-`src/lib/data.ts` loads both files once per build. It normalizes them into firmwares, devices, device families and Amcrest models, and gives each one a stable URL slug. The parsing of vendor, version and build date from filenames lives in `src/lib/parseFirmware.ts`.
+`src/lib/data.ts` loads both files once per build. It normalizes them into firmwares, devices, device families and retail models, and gives each one a stable URL slug. The parsing of vendor, version and build date from filenames lives in `src/lib/parseFirmware.ts`.
 
 ## Pages
 
@@ -19,7 +19,7 @@ At build time the site fetches two files from [amcrest-compatible-finder](https:
 | --- | --- |
 | `/firmware/<slug>/` | One page per firmware file |
 | `/device/<slug>/` | One page per device ID |
-| `/amcrest/<slug>/` | One page per Amcrest model |
+| `/model/<slug>/` | One page per retail model (the name on the box), from Amcrest, Dahua or Redline |
 | `/device/family/<slug>/`, `/firmware/year/<year>/` | Browse hubs |
 | `/search/` | Client-side search |
 | `/search-index.json` | Search index, generated at build time |

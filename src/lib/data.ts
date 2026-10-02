@@ -20,9 +20,12 @@ export interface Firmware {
   title: string;
   model: string | null;
   devices: string[];
-  amcrestModels: string[];
+  /** Retail model names the download source lists for this file. */
+  models: string[];
   url: string | null;
   host: string | null;
+  /** Brand that publishes the download, derived from where it is hosted. */
+  publisher: string | null;
   notes: string[];
   vendor: string | null;
   version: string | null;
@@ -39,9 +42,11 @@ export interface Device {
   firmwares: string[];
 }
 
-export interface AmcrestModel {
+export interface RetailModel {
   slug: string;
   name: string;
+  /** Brands whose download pages list this model, e.g. ["Amcrest"]. */
+  publishers: string[];
   /** Firmware filenames, newest first. */
   firmwares: string[];
 }
@@ -56,7 +61,7 @@ export interface Family {
 export interface SiteData {
   firmwares: Map<string, Firmware>;
   devices: Map<string, Device>;
-  amcrestModels: Map<string, AmcrestModel>;
+  models: Map<string, RetailModel>;
   families: Map<string, Family>;
   /** All firmwares, newest first. */
   firmwareList: Firmware[];
@@ -87,6 +92,17 @@ function deviceFamily(name: string): string {
 function validUrl(url: string | undefined): string | null {
   const trimmed = url?.trim();
   return trimmed && /^https?:\/\//i.test(trimmed) ? trimmed : null;
+}
+
+/** Which brand publishes a download, judged by where it is hosted. */
+function publisherOf(url: string): string | null {
+  const host = hostOf(url);
+  if (!host) return null;
+  if (/amcrest/i.test(url) || host === "sup-files.s3.us-east-2.amazonaws.com") return "Amcrest";
+  if (host.endsWith("dahuawiki.com")) return "Dahua";
+  if (host.endsWith("lorextechnology.com")) return "Lorex";
+  if (host.endsWith("gogss.com")) return /\/redline\//i.test(url) ? "Redline (GSS)" : "GSS";
+  return null;
 }
 
 function hostOf(url: string): string | null {
@@ -149,12 +165,12 @@ function assignTitles(list: Firmware[]) {
       continue;
     }
     const tokenSets = members.map((fw) => new Set(filenameTokens(fw)));
-    members.forEach((fw, i) => {
+    for (const fw of members) {
       const variant = filenameTokens(fw)
         .filter((token) => token !== fw.model && !NOT_VARIANT.test(token) && !tokenSets.every((set) => set.has(token)))
         .join(" ");
       titles.set(fw, shortTitle(fw, variant)!);
-    });
+    }
   }
 
   const counts = new Map<string, number>();
@@ -189,9 +205,10 @@ async function buildData(): Promise<SiteData> {
       displayName: safeDecode(filename),
       title: "", // filled in below once every firmware is known
       devices: cleanList(rawFirmwares[filename]).sort(),
-      amcrestModels: cleanList(camera?.camera_name).sort(),
+      models: cleanList(camera?.camera_name).sort(),
       url,
       host: url ? hostOf(url) : null,
+      publisher: url ? publisherOf(url) : null,
       notes: cleanList(camera?.notes),
       ...parseFirmwareName(filename),
     });
@@ -199,18 +216,18 @@ async function buildData(): Promise<SiteData> {
   const firmwareList = [...firmwares.values()].sort(compareFirmware);
   assignTitles(firmwareList);
 
-  // Invert firmware -> devices / Amcrest models. Iterating the sorted list keeps every
+  // Invert firmware -> devices / retail models. Iterating the sorted list keeps every
   // per-device firmware list newest-first without re-sorting.
   const deviceFirmwares = new Map<string, string[]>();
-  const amcrestFirmwares = new Map<string, string[]>();
+  const modelFirmwares = new Map<string, string[]>();
   for (const fw of firmwareList) {
     for (const device of fw.devices) {
       if (!deviceFirmwares.has(device)) deviceFirmwares.set(device, []);
       deviceFirmwares.get(device)!.push(fw.filename);
     }
-    for (const model of fw.amcrestModels) {
-      if (!amcrestFirmwares.has(model)) amcrestFirmwares.set(model, []);
-      amcrestFirmwares.get(model)!.push(fw.filename);
+    for (const model of fw.models) {
+      if (!modelFirmwares.has(model)) modelFirmwares.set(model, []);
+      modelFirmwares.get(model)!.push(fw.filename);
     }
   }
 
@@ -251,13 +268,14 @@ async function buildData(): Promise<SiteData> {
     });
   }
 
-  const amcrestSlugs = assignSlugs(amcrestFirmwares.keys());
-  const amcrestModels = new Map<string, AmcrestModel>();
-  for (const [name, fws] of [...amcrestFirmwares].sort(([a], [b]) => a.localeCompare(b))) {
-    amcrestModels.set(name, { slug: amcrestSlugs.get(name)!, name, firmwares: fws });
+  const modelSlugs = assignSlugs(modelFirmwares.keys());
+  const models = new Map<string, RetailModel>();
+  for (const [name, fws] of [...modelFirmwares].sort(([a], [b]) => a.localeCompare(b))) {
+    const publishers = [...new Set(fws.map((f) => firmwares.get(f)!.publisher).filter((p): p is string => !!p))].sort();
+    models.set(name, { slug: modelSlugs.get(name)!, name, publishers, firmwares: fws });
   }
 
-  return { firmwares, devices, amcrestModels, families, firmwareList };
+  return { firmwares, devices, models, families, firmwareList };
 }
 
 let cached: Promise<SiteData> | undefined;
@@ -290,7 +308,7 @@ export const paths = {
   firmware: (fw: Pick<Firmware, "slug">) => `/firmware/${fw.slug}/`,
   device: (d: Pick<Device, "slug">) => `/device/${d.slug}/`,
   family: (f: Pick<Family, "slug">) => `/device/family/${f.slug}/`,
-  amcrest: (m: Pick<AmcrestModel, "slug">) => `/amcrest/${m.slug}/`,
+  model: (m: Pick<RetailModel, "slug">) => `/model/${m.slug}/`,
 };
 
 export function formatDate(iso: string | null): string | null {
@@ -350,3 +368,6 @@ export function firmwaresByYear(data: SiteData): { year: string; firmwares: Firm
   }
   return [...groups].map(([year, firmwares]) => ({ year, firmwares }));
 }
+
+/** Short brand name for display, e.g. "Redline (GSS)" → "Redline". */
+export const brandName = (publisher: string) => publisher.replace(/ \(.*\)$/, "");

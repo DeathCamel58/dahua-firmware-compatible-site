@@ -17,7 +17,7 @@ const topFamilies = [...data.families.values()]
 const stats = [
   { value: data.firmwareList.length, label: "firmware files" },
   { value: data.devices.size, label: "device IDs" },
-  { value: data.amcrestModels.size, label: "Amcrest models" },
+  { value: data.models.size, label: "retail models" },
 ];
 
 const infoUrls = [
@@ -88,7 +88,7 @@ const jsonLd = [
         <span class="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-sm font-bold text-accent-fg">2</span>
         <h3 class="mt-3 font-semibold">Search for it</h3>
         <p class="mt-2 text-sm text-muted">
-          Type the <code>updateSerial</code> (or your Amcrest model) into the search box above. If there's no exact match,
+          Type the <code>updateSerial</code> (or the model name on the box) into the search box above. If there's no exact match,
           try a shorter prefix such as <code>IPC-HDW2431</code>, or <a href="/device/">browse device families</a>.
         </p>
       </li>

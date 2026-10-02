@@ -1,0 +1,62 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import Chips from "@/components/Chips.astro";
+import PageHeader from "@/components/PageHeader.astro";
+import { brandName, getData, paths } from "@/lib/data";
+import { plural } from "@/lib/site";
+
+const data = await getData();
+
+// One section per brand that lists the model; a model listed by several brands appears in each.
+const UNKNOWN = "Other sources";
+const groups = new Map<string, { name: string; href: string }[]>();
+for (const model of data.models.values()) {
+  const brands = model.publishers.length > 0 ? model.publishers.map(brandName) : [UNKNOWN];
+  for (const brand of new Set(brands)) {
+    if (!groups.has(brand)) groups.set(brand, []);
+    groups.get(brand)!.push({ name: model.name, href: paths.model(model) });
+  }
+}
+// Biggest brands first, unknown last.
+const sorted = [...groups].sort(([a, x], [b, y]) =>
+  a === UNKNOWN ? 1 : b === UNKNOWN ? -1 : y.length - x.length || a.localeCompare(b),
+);
+const anchor = (brand: string) => `brand-${brand.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+---
+
+<BaseLayout
+  title="Firmware by retail model"
+  description={`Find firmware by the model name on the box: ${plural(data.models.size, "retail model")} from Amcrest, Dahua and Redline, each linked to its firmware and Dahua device IDs.`}
+  breadcrumbs={[{ name: "Home", href: "/" }, { name: "Retail models" }]}
+>
+  <PageHeader title="Retail models">
+    <p class="mt-3 max-w-3xl text-muted">
+      These are the model names brands use on the box and on their download pages, grouped by the brand that lists
+      them. If you only know your device's internal ID (its <code>updateSerial</code>), <a href="/device/">browse
+      devices</a> instead.
+    </p>
+  </PageHeader>
+
+  <nav aria-label="Jump to brand" class="mb-6 flex flex-wrap gap-2 text-sm">
+    {
+      sorted.map(([brand, models]) => (
+        <a href={`#${anchor(brand)}`} class="rounded-md border border-border bg-surface px-3 py-1 no-underline hover:border-accent">
+          {brand} <span class="text-muted">· {models.length}</span>
+        </a>
+      ))
+    }
+  </nav>
+
+  <div class="space-y-10">
+    {
+      sorted.map(([brand, models]) => (
+        <section id={anchor(brand)} aria-labelledby={`${anchor(brand)}-heading`} class="scroll-mt-24">
+          <h2 id={`${anchor(brand)}-heading`} class="section-title">
+            {brand} <span class="text-sm font-normal text-muted">({models.length})</span>
+          </h2>
+          <Chips items={models} />
+        </section>
+      ))
+    }
+  </div>
+</BaseLayout>

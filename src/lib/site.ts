@@ -7,7 +7,7 @@ export const SITE_REPO_URL = "https://github.com/DeathCamel58/dahua-firmware-com
 export const nav = [
   { name: "Devices", href: "/device/" },
   { name: "Firmware", href: "/firmware/" },
-  { name: "Amcrest models", href: "/amcrest/" },
+  { name: "Retail models", href: "/model/" },
   { name: "How to", href: "/#how-to" },
 ];
 
