@@ -41,3 +41,37 @@ export function describeWithList(base: string, items: string[], intro = "includi
   }
   return clampDescription(`${base}.`, limit);
 }
+
+/** A description sentence, or a list that is shortened to fit ("Sold as A, B and 3 more"). */
+export type DescriptionPart = string | null | undefined | false | { lead: string; items: string[] };
+
+/**
+ * Build a meta description from sentences in priority order. The first part is always used
+ * (clamped if needed); later ones are added only while they fit, and lists keep as many items
+ * as fit. Nothing is cut off mid-sentence.
+ */
+export function composeDescription(parts: DescriptionPart[], limit = DESCRIPTION_LIMIT): string {
+  const sentence = (text: string) => (/[.!?…]$/.test(text) ? text : `${text}.`);
+  let out = "";
+  for (const part of parts) {
+    if (!part) continue;
+    const candidates: string[] = [];
+    if (typeof part === "string") candidates.push(sentence(part));
+    else {
+      const { lead, items } = part;
+      for (let n = items.length; n > 0; n--) {
+        const rest = items.length - n;
+        candidates.push(sentence(`${lead} ${items.slice(0, n).join(", ")}${rest ? ` and ${rest} more` : ""}`));
+      }
+    }
+    if (candidates.length === 0) continue;
+    if (!out) {
+      // Longest version that fits, else the shortest one clamped.
+      out = clampDescription(candidates.find((c) => c.length <= limit) ?? candidates.at(-1)!, limit);
+      continue;
+    }
+    const fit = candidates.find((c) => out.length + 1 + c.length <= limit);
+    if (fit) out = `${out} ${fit}`;
+  }
+  return out;
+}

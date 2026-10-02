@@ -5,8 +5,8 @@ import Chips from "@/components/Chips.astro";
 import FirmwareList from "@/components/FirmwareList.astro";
 import PageHeader from "@/components/PageHeader.astro";
 import Stats from "@/components/Stats.astro";
-import { collect, formatDate, getData, paths, similarDevices } from "@/lib/data";
-import { plural } from "@/lib/site";
+import { collect, formatDate, getData, lastmodOf, paths, retailNames, similarDevices } from "@/lib/data";
+import { composeDescription, plural } from "@/lib/site";
 
 export const getStaticPaths = (async () => {
   const data = await getData();
@@ -26,15 +26,18 @@ const models = collect(data, device.firmwares, (fw) => fw.models)
   .slice(0, 24)
   .map((name) => data.models.get(name)!);
 
-const description =
-  `Firmware that may be compatible with the ${device.name}: ${plural(firmwares.length, "file")}` +
-  (newest ? `, newest from ${formatDate(newest.date)}` : "") +
-  ". Direct download links and compatibility details.";
+const description = composeDescription([
+  `${device.name} firmware: ${plural(firmwares.length, "file")}${vendors.length ? ` from ${vendors.join(", ")}` : ""}`,
+  newest && (newest.version ? `Newest ${newest.version} (${formatDate(newest.date)})` : `Updated ${formatDate(newest.date)}`),
+  { lead: "Same hardware sold as", items: retailNames(firmwares) },
+  "Download links and archived copies",
+]);
 ---
 
 <BaseLayout
   title={`${device.name} firmware downloads`}
   description={description}
+  lastmod={lastmodOf(firmwares)}
   breadcrumbs={[
     { name: "Home", href: "/" },
     { name: "Devices", href: "/device/" },

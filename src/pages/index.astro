@@ -5,8 +5,8 @@ import FirmwareList from "@/components/FirmwareList.astro";
 import Search from "@/components/Search.astro";
 import VendorLogo from "@/components/VendorLogo.astro";
 import Warning from "@/components/Warning.astro";
-import { getData, paths } from "@/lib/data";
-import { CONTACT_URL, SITE_NAME, SITE_TAGLINE, plural } from "@/lib/site";
+import { getData, lastmodOf, paths } from "@/lib/data";
+import { CONTACT_URL, SITE_NAME, SITE_TAGLINE, composeDescription, plural } from "@/lib/site";
 
 const data = await getData();
 const newest = data.firmwareList.slice(0, 6);
@@ -41,8 +41,13 @@ const jsonLd = [
 
 <BaseLayout
   title={SITE_NAME}
-  description={`${SITE_TAGLINE}. Search ${plural(data.firmwareList.length, "firmware file")} and ${plural(data.devices.size, "device ID")}, with direct download links.`}
+  description={composeDescription([
+    `Find firmware for Dahua-made cameras, NVRs and DVRs from ${plural(data.vendors.size, "vendor")}, including Amcrest, EmpireTech and Lorex`,
+    `${plural(data.firmwareList.length, "firmware file")} matched to ${plural(data.devices.size, "device")}`,
+    "Free downloads and archived copies",
+  ])}
   jsonLd={jsonLd}
+  lastmod={lastmodOf(data.firmwareList)}
   hideHeaderSearch
 >
   <section class="mx-auto max-w-3xl py-6 text-center sm:py-12">

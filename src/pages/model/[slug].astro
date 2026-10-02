@@ -6,8 +6,8 @@ import FirmwareList from "@/components/FirmwareList.astro";
 import PageHeader from "@/components/PageHeader.astro";
 import Stats from "@/components/Stats.astro";
 import VendorLogo from "@/components/VendorLogo.astro";
-import { collect, formatDate, getData, paths } from "@/lib/data";
-import { plural } from "@/lib/site";
+import { collect, formatDate, getData, lastmodOf, paths } from "@/lib/data";
+import { composeDescription, plural } from "@/lib/site";
 
 export const getStaticPaths = (async () => {
   const data = await getData();
@@ -35,15 +35,18 @@ const brand = model.publishers.length === 1 ? model.publishers[0] : null;
 const fullName = brand && !model.name.toUpperCase().startsWith(brand.toUpperCase()) ? `${brand} ${model.name}` : model.name;
 const listedBy = model.publishers.length > 0 ? model.publishers.join(" and ") : "Its download source";
 
-const description =
-  `${fullName} firmware: ${plural(firmwares.length, "file")}` +
-  (newest ? `, newest from ${formatDate(newest.date)}` : "") +
-  ". Download links plus the Dahua device IDs the same firmware supports.";
+const description = composeDescription([
+  `${fullName} firmware: ${plural(firmwares.length, "file")}`,
+  newest && (newest.version ? `Newest ${newest.version} (${formatDate(newest.date)})` : `Updated ${formatDate(newest.date)}`),
+  { lead: "Runs on Dahua hardware", items: devices.map((d) => d.name) },
+  "Download links and archived copies",
+]);
 ---
 
 <BaseLayout
   title={`${fullName} firmware`}
   description={description}
+  lastmod={lastmodOf(firmwares)}
   breadcrumbs={[{ name: "Home", href: "/" }, { name: "Retail models", href: "/model/" }, { name: model.name }]}
 >
   {

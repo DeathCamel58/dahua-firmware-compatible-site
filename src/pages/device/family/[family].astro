@@ -2,8 +2,8 @@
 import type { GetStaticPaths } from "astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import PageHeader from "@/components/PageHeader.astro";
-import { formatDate, getData, paths } from "@/lib/data";
-import { plural } from "@/lib/site";
+import { formatDate, getData, lastmodOf, paths } from "@/lib/data";
+import { composeDescription, plural } from "@/lib/site";
 
 export const getStaticPaths = (async () => {
   const data = await getData();
@@ -24,13 +24,21 @@ const devices = family.devices.map((name) => {
 const isOther = family.name === "Other";
 const title = isOther ? "Other Dahua devices" : `${family.name} series firmware`;
 const description = isOther
-  ? `${plural(devices.length, "less common Dahua device ID")} with firmware that may be compatible.`
-  : `Firmware for ${plural(devices.length, "Dahua " + family.name + " model")}, e.g. ${family.devices.slice(0, 3).join(", ")}. See which firmware files may be compatible with each.`;
+  ? composeDescription([
+      `Firmware for ${plural(devices.length, "less common Dahua device")}`,
+      { lead: "Including", items: family.devices },
+    ])
+  : composeDescription([
+      `Firmware for ${plural(devices.length, "Dahua " + family.name + " model")}`,
+      { lead: "Including", items: family.devices },
+      "See which firmware files may work with each",
+    ]);
 ---
 
 <BaseLayout
   title={title}
   description={description}
+  lastmod={lastmodOf([...new Set(devices.flatMap(({ device }) => device.firmwares))].map((f) => data.firmwares.get(f)!))}
   breadcrumbs={[{ name: "Home", href: "/" }, { name: "Devices", href: "/device/" }, { name: family.name }]}
 >
   <PageHeader eyebrow="Device family" title={isOther ? "Other devices" : family.name} mono={!isOther}>

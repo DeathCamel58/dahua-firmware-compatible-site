@@ -16,10 +16,11 @@ import {
   legacySegment,
   paths,
   relatedFirmwares,
+  retailNames,
   type Firmware,
   type Listing,
 } from "@/lib/data";
-import { clampDescription, describeWithList, plural } from "@/lib/site";
+import { composeDescription, describeWithList, plural } from "@/lib/site";
 
 export const getStaticPaths = (async () => {
   const data = await getData();
@@ -63,10 +64,29 @@ const compatibility =
     : devices.length > 0
       ? `May work with ${plural(devices.length, "device")}`
       : analysisLabel(fw);
-// The meta description leads with the exact filename (what people search for); the on-page
-// summary skips it because the H1 already shows it.
-const lead = `${fw.displayName}: ${built}. ${compatibility}`;
-const description = devices.length > 0 ? describeWithList(lead, highlights) : clampDescription(`${lead}.`);
+// The meta description leads with the exact filename (what people search for), then the model
+// names people actually type; the on-page summary skips the filename because the H1 shows it.
+const soldAs = retailNames([fw]);
+// Some vendors (RVI) put every model name into the filename; past ~95 characters it would eat the
+// whole description, so shorten it there and let "Sold as" carry the model names.
+const leadName =
+  fw.displayName.length <= 95 ? fw.displayName : fw.title.length <= 80 ? fw.title : `${fw.displayName.slice(0, 60)}…`;
+const description = composeDescription([
+  `${leadName}: ${built}`,
+  fw.platform === "hikvision"
+    ? compatibility
+    : fw.truncated
+      ? "Truncated file, can't be installed"
+      : !fw.downloadable
+        ? "Listed, but not downloadable"
+        : null,
+  { lead: "Sold as", items: soldAs },
+  devices.length > 0 && !notDahua ? { lead: `Works with ${plural(devices.length, "device")} incl.`, items: highlights } : null,
+  !devices.length && !notDahua && fw.downloadable ? compatibility : null,
+  fw.download?.kind === "archive" ? "Archived copy available" : null,
+  fw.version && !fw.title.includes(fw.version) ? `Version ${fw.version}` : null,
+  fw.download && !fw.truncated ? "Download link, checksums and compatible hardware" : null,
+]);
 const summary =
   devices.length > 0
     ? describeWithList(`${built}. ${compatibility}`, highlights.slice(0, 3), "including", 300)
@@ -84,6 +104,13 @@ const jsonLd = [
     ...(fw.download && !fw.truncated ? { downloadUrl: fw.download.url } : {}),
     ...(fw.size ? { fileSize: formatSize(fw.size) } : {}),
     ...(fw.vendors[0] ? { publisher: { "@type": "Organization", name: fw.vendors[0] } } : {}),
+    url: new URL(paths.firmware(fw), Astro.site).href,
+    isAccessibleForFree: true,
+    ...(fw.changelog ? { releaseNotes: fw.changelog } : {}),
+    ...(soldAs.length ? { keywords: soldAs.slice(0, 20).join(", ") } : {}),
+    ...(fw.vendors.length > 1
+      ? { provider: fw.vendors.map((name) => ({ "@type": "Organization", name })) }
+      : {}),
   },
 ];
 
@@ -120,6 +147,7 @@ const checksums = [
       title={fw.title}
       description={description}
       jsonLd={jsonLd}
+      lastmod={fw.lastmod}
       breadcrumbs={[{ name: "Home", href: "/" }, { name: "Firmware", href: "/firmware/" }, { name: fw.displayName }]}
     >
       <PageHeader eyebrow="Firmware" title={fw.displayName} mono copyable>

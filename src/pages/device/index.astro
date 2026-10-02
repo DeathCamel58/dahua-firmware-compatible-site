@@ -1,7 +1,7 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import PageHeader from "@/components/PageHeader.astro";
-import { getData, paths } from "@/lib/data";
+import { getData, lastmodOf, paths } from "@/lib/data";
 import { plural } from "@/lib/site";
 
 const data = await getData();
@@ -16,6 +16,7 @@ const families = [...data.families.values()].sort((a, b) => {
 <BaseLayout
   title="Dahua device families"
   description={`Browse ${plural(data.devices.size, "Dahua device ID")} across ${families.length} families (IPC-HFW, IPC-HDBW, NVR, XVR, SD and more) to find firmware that may be compatible.`}
+  lastmod={lastmodOf(data.firmwareList)}
   breadcrumbs={[{ name: "Home", href: "/" }, { name: "Devices" }]}
 >
   <PageHeader title="Devices by family">

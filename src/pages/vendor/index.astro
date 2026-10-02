@@ -2,11 +2,25 @@
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import PageHeader from "@/components/PageHeader.astro";
 import VendorLogo from "@/components/VendorLogo.astro";
-import { getData, paths } from "@/lib/data";
+import { getData, lastmodOf, paths } from "@/lib/data";
 import { plural } from "@/lib/site";
 
 const data = await getData();
 const vendors = [...data.vendors.values()].sort((a, b) => b.firmwares.length - a.firmwares.length || a.name.localeCompare(b.name));
+const jsonLd = [
+  {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: "Vendors",
+    numberOfItems: vendors.length,
+    itemListElement: vendors.map((v, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      url: new URL(paths.vendor(v), Astro.site).href,
+      name: v.name,
+    })),
+  },
+];
 ---
 
 <BaseLayout
@@ -15,6 +29,8 @@ const vendors = [...data.vendors.values()].sort((a, b) => b.firmwares.length - a
     .slice(0, 4)
     .map((v) => v.name)
     .join(", ")}.`}
+  jsonLd={jsonLd}
+  lastmod={lastmodOf(data.firmwareList)}
   breadcrumbs={[{ name: "Home", href: "/" }, { name: "Vendors" }]}
 >
   <PageHeader title="Vendors">

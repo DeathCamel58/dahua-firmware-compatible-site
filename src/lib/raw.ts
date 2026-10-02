@@ -73,6 +73,8 @@ export interface RawEntry {
     /** IDs were recovered from the intact start of a truncated file. */
     truncated: boolean;
     error: string | null;
+    /** When it was analysed (YYYY-MM-DD), if known. */
+    processedAt: string | null;
   };
 }
 
@@ -130,7 +132,7 @@ export function classifyHardware(ids: string[]): Hardware {
   const out: Hardware = { models: [], boards: [], hwids: [], ignored: [] };
   for (const raw of ids) {
     const id = raw.replace(/^General_/, "");
-    if (IGNORED_IDS.has(id.toUpperCase()) || /\.(bin|zip|img)$/i.test(id)) out.ignored.push(raw);
+    if (IGNORED_IDS.has(id.toUpperCase()) || NOT_A_DEVICE.test(id)) out.ignored.push(raw);
     else if (HWID.test(id)) out.hwids.push(id.toLowerCase());
     else if (BOARD.test(id)) out.boards.push(id);
     else out.models.push(id);
@@ -139,12 +141,22 @@ export function classifyHardware(ids: string[]): Hardware {
   return out;
 }
 
+/** Version strings and file-name fragments occasionally end up among hardware IDs; they aren't devices. */
+const NOT_A_DEVICE = /^V\d+\.\d+\.|_V\d+\.\d+|\.(bin|zip|img|dav)$/i;
+
 function readHardware(value: unknown, fallbackIds: string[]): Hardware {
-  if (value && typeof value === "object") {
-    const h = value as Record<string, unknown>;
-    return { models: list(h.models), boards: list(h.boards), hwids: list(h.hwids), ignored: list(h.ignored) };
-  }
-  return classifyHardware(fallbackIds);
+  if (!value || typeof value !== "object") return classifyHardware(fallbackIds);
+  const h = value as Record<string, unknown>;
+  const junk = (ids: string[]) => ids.filter((id) => NOT_A_DEVICE.test(id));
+  const keep = (ids: string[]) => ids.filter((id) => !NOT_A_DEVICE.test(id));
+  const models = list(h.models);
+  const boards = list(h.boards);
+  return {
+    models: keep(models),
+    boards: keep(boards),
+    hwids: list(h.hwids),
+    ignored: [...list(h.ignored), ...junk(models), ...junk(boards)],
+  };
 }
 
 const ANALYSIS_STATUSES = new Set<AnalysisStatus>(["ok", "no_ids", "extract_failed", "not_dahua", "duplicate"]);
@@ -220,7 +232,7 @@ function readEntry(filename: string, camera: Json | undefined, compat: unknown):
   if (Array.isArray(compat)) {
     const hardware = classifyHardware(list(compat));
     const usable = hardware.models.length + hardware.boards.length + hardware.hwids.length > 0;
-    analysis = { status: usable ? "ok" : "no_ids", hardware, truncated: false, error: null };
+    analysis = { status: usable ? "ok" : "no_ids", hardware, truncated: false, error: null, processedAt: null };
   } else if (compat && typeof compat === "object") {
     const r = compat as Json;
     const status = str(r.status) as AnalysisStatus | null;
@@ -230,9 +242,10 @@ function readEntry(filename: string, camera: Json | undefined, compat: unknown):
       hardware: readHardware(r.hardware, ids),
       truncated: r.truncated === true,
       error: str(r.error),
+      processedAt: str(r.processed_at)?.slice(0, 10) ?? null,
     };
   } else {
-    analysis = { status: "pending", hardware: classifyHardware([]), truncated: false, error: null };
+    analysis = { status: "pending", hardware: classifyHardware([]), truncated: false, error: null, processedAt: null };
   }
 
   const hashes = (c.file_hashes ?? {}) as Json;

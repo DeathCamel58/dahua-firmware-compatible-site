@@ -59,10 +59,14 @@ function parseVersion(name: string): string | null {
 }
 
 function parseModel(name: string): string | null {
-  const tokens = name.replace(/\.(bin|zip|rar|img|tar|gz|sw|iav)(\.bin)?$/i, "").split("_");
+  const tokens = name
+    .replace(/\.(bin|zip|rar|img|tar|gz|sw|iav|dav|pkg|exe|dmg|msi)(\.bin)?$/i, "")
+    .replace(/\+/g, " ")
+    .split("_");
   // Skip leading build numbers ("1926756_") and vendor prefixes ("DH_", "General_").
   while (tokens.length && (/^\d{5,}$/.test(tokens[0]) || tokens[0].toLowerCase() in VENDOR_PREFIXES)) tokens.shift();
-  const model = tokens[0];
+  // "Amcrest Survelliance Pro Mac V1.11.1.R…" / "NXL-V3.200…": the model is what comes before the version.
+  const model = tokens[0]?.replace(/[\s_-]*V\d+\.\d+.*$/i, "").trim();
   if (!model || model.length < 3 || /^V\d/i.test(model)) return null;
   return model;
 }

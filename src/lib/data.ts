@@ -116,6 +116,11 @@ export interface Firmware {
   download: Download | null;
   /** Earliest first_seen across listings. */
   firstSeen: string | null;
+  /**
+   * When this page's content last changed (YYYY-MM-DD): the release date, a vendor listing first
+   * appearing, or the file being analysed. Deliberately not last_seen, which moves every run.
+   */
+  lastmod: string | null;
 }
 
 export interface Device {
@@ -240,6 +245,10 @@ function compareFirmware(a: Firmware, b: Firmware): number {
 
 const unique = <T>(values: Iterable<T>) => [...new Set(values)];
 
+/** Latest of some YYYY-MM-DD dates (nulls ignored). */
+export const maxDate = (dates: (string | null | undefined)[]) =>
+  dates.filter((d): d is string => !!d).sort().at(-1) ?? null;
+
 /** "V2.800.0000018.0.R" style versions read well in titles; vendor labels like "K74_V3.4.98" don't. */
 const isDahuaVersion = (version: string | null) => !!version && /^V?\d+\.\d+\.[0-9A-Za-z]+/.test(version);
 const vLabel = (version: string) => (version.startsWith("V") ? version : `V${version}`);
@@ -254,6 +263,9 @@ function shortTitle(fw: Firmware, variant = ""): string | null {
 
 /** Filename tokens that never distinguish variants: vendor prefixes and leading build numbers. */
 const NOT_VARIANT = /^(general|dh|dahua|amcrest|customer|lorex|flir|\d{5,})$/i;
+
+/** Version/build fragments ("V3.100.0000.0.R.20170401.language") are already in the title. */
+const VERSION_TOKEN = /V\d+\.\d+\.|\d+\.\d+\.\d+/i;
 
 const filenameTokens = (fw: Firmware) => fw.displayName.replace(/\.(bin|zip|rar|img|tar|gz|sw|iav|dav)$/i, "").split("_");
 
@@ -280,7 +292,14 @@ function assignTitles(list: Firmware[]) {
     const tokenSets = members.map((fw) => new Set(filenameTokens(fw)));
     for (const fw of members) {
       const variant = filenameTokens(fw)
-        .filter((token) => token !== fw.model && !NOT_VARIANT.test(token) && !tokenSets.every((set) => set.has(token)))
+        .filter(
+          (token) =>
+            token !== fw.model &&
+            !NOT_VARIANT.test(token) &&
+            !VERSION_TOKEN.test(token) &&
+            !tokenSets.every((set) => set.has(token)),
+        )
+        .filter((token, i, all) => all.indexOf(token) === i)
         .join(" ");
       titles.set(fw, shortTitle(fw, variant)!);
     }
@@ -291,6 +310,14 @@ function assignTitles(list: Firmware[]) {
   for (const fw of list) {
     const title = titles.get(fw);
     fw.title = title && counts.get(title) === 1 ? title : fw.displayName;
+  }
+
+  // Two keys can decode to the same name ("…%2B(1).bin" and "…+(1).bin"); keep titles unique anyway.
+  const seen = new Map<string, number>();
+  for (const fw of list) {
+    const n = (seen.get(fw.title) ?? 0) + 1;
+    seen.set(fw.title, n);
+    if (n > 1) fw.title = fw.filename !== fw.displayName ? fw.filename : `${fw.title} (copy ${n})`;
   }
 }
 
@@ -428,11 +455,18 @@ async function buildData(): Promise<SiteData> {
       archiveItem: e.archive_item,
       download: e.downloadable ? pickDownload(e.archive_url, listings, e.url) : null,
       firstSeen: listings.map((l) => l.firstSeen).filter((d): d is string => !!d).sort()[0] ?? null,
+      lastmod: maxDate([vendorDate ?? parsed.buildDate, e.analysis.processedAt, ...listings.map((l) => l.firstSeen)]),
     });
   }
 
   const firmwareList = [...firmwares.values()].sort(compareFirmware);
   assignTitles(firmwareList);
+  // Say up front, in search results too, when a file isn't usable on Dahua hardware.
+  for (const fw of firmwareList) {
+    if (fw.platform === "hikvision") fw.title += " (Hikvision)";
+    else if (fw.truncated) fw.title += " (truncated)";
+    else if (!fw.downloadable) fw.title += " (not downloadable)";
+  }
 
   // Invert firmware -> devices / retail models / vendors / hex IDs. Iterating the sorted list
   // keeps every inverted list newest-first without re-sorting.
@@ -650,3 +684,21 @@ export function analysisLabel(fw: Firmware): string {
       return "Analysis pending";
   }
 }
+
+/** "Amcrest IP8M-2493EW-AI-V3": a retail model with its vendor in front, unless the name already starts with it. */
+export function vendorModelName(vendor: string | null, model: string): string {
+  if (!vendor) return model;
+  const short = vendor.split(/\s+/)[0];
+  return model.toUpperCase().startsWith(short.toUpperCase()) ? model : `${short} ${model}`;
+}
+
+/** Retail model names, vendor-qualified, from the listings of some firmwares (first-seen order, no duplicates). */
+export function retailNames(firmwares: Firmware[], only?: (model: string) => boolean): string[] {
+  const names = new Set<string>();
+  for (const fw of firmwares)
+    for (const l of fw.listings) for (const m of l.models) if (!only || only(m)) names.add(vendorModelName(l.vendor, m));
+  return [...names];
+}
+
+/** Latest content date across some firmwares. */
+export const lastmodOf = (firmwares: Firmware[]) => maxDate(firmwares.map((fw) => fw.lastmod));

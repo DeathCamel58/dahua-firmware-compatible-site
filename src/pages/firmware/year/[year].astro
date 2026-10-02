@@ -3,7 +3,7 @@ import type { GetStaticPaths } from "astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import FirmwareList from "@/components/FirmwareList.astro";
 import PageHeader from "@/components/PageHeader.astro";
-import { UNDATED, firmwaresByYear, getData } from "@/lib/data";
+import { UNDATED, firmwaresByYear, getData, lastmodOf, paths } from "@/lib/data";
 import { plural } from "@/lib/site";
 
 export const getStaticPaths = (async () => {
@@ -25,11 +25,27 @@ const description =
   year === UNDATED
     ? `${plural(firmwares.length, "firmware file")} with no known release or build date, with download links and compatible devices.`
     : `${plural(firmwares.length, "Dahua, Amcrest and Lorex firmware file")} from ${year}, newest first, with download links and compatible devices.`;
+const jsonLd = [
+  {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: title,
+    numberOfItems: firmwares.length,
+    itemListElement: firmwares.slice(0, 100).map((fw, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      url: new URL(paths.firmware(fw), Astro.site).href,
+      name: fw.title,
+    })),
+  },
+];
 ---
 
 <BaseLayout
   title={title}
   description={description}
+  jsonLd={jsonLd}
+  lastmod={lastmodOf(firmwares)}
   breadcrumbs={[{ name: "Home", href: "/" }, { name: "Firmware", href: "/firmware/" }, { name: label(year) }]}
 >
   <PageHeader title={title}>

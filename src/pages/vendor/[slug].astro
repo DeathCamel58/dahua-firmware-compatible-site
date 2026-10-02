@@ -6,8 +6,8 @@ import FirmwareList from "@/components/FirmwareList.astro";
 import PageHeader from "@/components/PageHeader.astro";
 import Stats from "@/components/Stats.astro";
 import VendorLogo from "@/components/VendorLogo.astro";
-import { formatDate, getData, paths } from "@/lib/data";
-import { plural } from "@/lib/site";
+import { formatDate, getData, lastmodOf, paths } from "@/lib/data";
+import { composeDescription, plural } from "@/lib/site";
 
 export const getStaticPaths = (async () => {
   const data = await getData();
@@ -25,16 +25,41 @@ const delisted = firmwares.filter((fw) => ofVendor(fw).every((l) => l.delisted))
 const newest = firmwares.find((fw) => fw.date);
 const models = vendor.models.map((name) => data.models.get(name)!).filter(Boolean);
 
-const description =
-  `${vendor.name} firmware downloads: ${plural(firmwares.length, "file")}` +
-  (models.length ? ` for ${plural(models.length, "model")}` : "") +
-  (newest ? `, newest from ${formatDate(newest.date)}` : "") +
-  ", with the Dahua hardware each one supports.";
+const description = composeDescription([
+  `${vendor.name} firmware downloads: ${plural(firmwares.length, "file")}${models.length ? ` for ${plural(models.length, "model")}` : ""}`,
+  newest && (newest.version ? `Newest ${newest.version} (${formatDate(newest.date)})` : `Updated ${formatDate(newest.date)}`),
+  { lead: "Models include", items: models.map((m) => m.name) },
+  "With the Dahua hardware each file supports",
+]);
+const site = Astro.site!;
+const jsonLd = [
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: vendor.name,
+    ...(vendor.brand?.website ? { url: vendor.brand.website, sameAs: [vendor.brand.website] } : {}),
+    ...(vendor.brand?.logo ? { logo: new URL(vendor.brand.logo, site).href } : {}),
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: `${vendor.name} firmware`,
+    numberOfItems: firmwares.length,
+    itemListElement: firmwares.slice(0, 100).map((fw, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      url: new URL(paths.firmware(fw), site).href,
+      name: fw.title,
+    })),
+  },
+];
 ---
 
 <BaseLayout
   title={`${vendor.name} firmware`}
   description={description}
+  jsonLd={jsonLd}
+  lastmod={lastmodOf(firmwares)}
   breadcrumbs={[{ name: "Home", href: "/" }, { name: "Vendors", href: "/vendor/" }, { name: vendor.name }]}
 >
   <div class="mb-4">

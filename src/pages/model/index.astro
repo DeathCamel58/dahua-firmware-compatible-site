@@ -2,7 +2,7 @@
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import Chips from "@/components/Chips.astro";
 import PageHeader from "@/components/PageHeader.astro";
-import { getData, paths } from "@/lib/data";
+import { getData, lastmodOf, paths } from "@/lib/data";
 import { plural } from "@/lib/site";
 
 const data = await getData();
@@ -27,6 +27,7 @@ const anchor = (brand: string) => `brand-${brand.toLowerCase().replace(/[^a-z0-9
 <BaseLayout
   title="Firmware by retail model"
   description={`Find firmware by the model name on the box: ${plural(data.models.size, "retail model")} from ${data.vendors.size} vendors, each linked to its firmware and Dahua device IDs.`}
+  lastmod={lastmodOf(data.firmwareList)}
   breadcrumbs={[{ name: "Home", href: "/" }, { name: "Retail models" }]}
 >
   <PageHeader title="Retail models">
