@@ -16,6 +16,9 @@ export interface Firmware {
   filename: string;
   /** Filename with %xx sequences decoded, for display. */
   displayName: string;
+  /** Short, human-friendly page title, e.g. "IPC-HX5X3X-Rhea firmware V2.800.0000018.0 (Jul 7, 2021)". */
+  title: string;
+  model: string | null;
   devices: string[];
   amcrestModels: string[];
   url: string | null;
@@ -108,6 +111,60 @@ function cleanList(values: string[] | null | undefined): string[] {
   return [...new Set((values ?? []).map((v) => v.trim()).filter((v) => v && v !== "N/A"))];
 }
 
+function shortTitle(fw: Firmware, variant = ""): string | null {
+  if (!fw.model || (!fw.version && !fw.buildDate)) return null;
+  return [
+    `${fw.model}${variant ? ` ${variant}` : ""} firmware`,
+    fw.version && `V${fw.version}`,
+    fw.buildDate && `(${formatDate(fw.buildDate)})`,
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+/** Filename tokens that never distinguish variants: vendor prefixes and leading build numbers. */
+const NOT_VARIANT = /^(general|dh|dahua|amcrest|customer|lorex|flir|\d{5,})$/i;
+
+const filenameTokens = (fw: Firmware) =>
+  fw.displayName.replace(/\.(bin|zip|rar|img|tar|gz|sw|iav)$/i, "").split("_");
+
+/**
+ * Give each firmware a short title. Files that would share one (regional or component variants
+ * of the same build) get the filename parts that tell them apart, e.g. "E2" vs "Stream3-USA".
+ * Anything still ambiguous falls back to the full filename.
+ */
+function assignTitles(list: Firmware[]) {
+  const groups = new Map<string, Firmware[]>();
+  for (const fw of list) {
+    const title = shortTitle(fw);
+    if (!title) continue;
+    if (!groups.has(title)) groups.set(title, []);
+    groups.get(title)!.push(fw);
+  }
+
+  const titles = new Map<Firmware, string>();
+  for (const [title, members] of groups) {
+    if (members.length === 1) {
+      titles.set(members[0], title);
+      continue;
+    }
+    const tokenSets = members.map((fw) => new Set(filenameTokens(fw)));
+    members.forEach((fw, i) => {
+      const variant = filenameTokens(fw)
+        .filter((token) => token !== fw.model && !NOT_VARIANT.test(token) && !tokenSets.every((set) => set.has(token)))
+        .join(" ");
+      titles.set(fw, shortTitle(fw, variant)!);
+    });
+  }
+
+  const counts = new Map<string, number>();
+  for (const title of titles.values()) counts.set(title, (counts.get(title) ?? 0) + 1);
+  for (const fw of list) {
+    const title = titles.get(fw);
+    fw.title = title && counts.get(title) === 1 ? title : fw.displayName;
+  }
+}
+
 async function buildData(): Promise<SiteData> {
   const [rawCameras, rawFirmwares] = await Promise.all([
     loadJson<RawCameras>("cameras.json"),
@@ -130,6 +187,7 @@ async function buildData(): Promise<SiteData> {
       slug: firmwareSlugs.get(filename)!,
       filename,
       displayName: safeDecode(filename),
+      title: "", // filled in below once every firmware is known
       devices: cleanList(rawFirmwares[filename]).sort(),
       amcrestModels: cleanList(camera?.camera_name).sort(),
       url,
@@ -139,6 +197,7 @@ async function buildData(): Promise<SiteData> {
     });
   }
   const firmwareList = [...firmwares.values()].sort(compareFirmware);
+  assignTitles(firmwareList);
 
   // Invert firmware -> devices / Amcrest models. Iterating the sorted list keeps every
   // per-device firmware list newest-first without re-sorting.

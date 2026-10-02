@@ -8,7 +8,7 @@ import Redirect from "@/components/Redirect.astro";
 import Stats from "@/components/Stats.astro";
 import Warning from "@/components/Warning.astro";
 import { formatDate, getData, legacySegment, paths, relatedFirmwares, type Firmware } from "@/lib/data";
-import { plural } from "@/lib/site";
+import { clampDescription, describeWithList, plural } from "@/lib/site";
 
 export const getStaticPaths = (async () => {
   const data = await getData();
@@ -32,17 +32,18 @@ const devices = fw.devices.map((name) => data.devices.get(name)!);
 const amcrest = fw.amcrestModels.map((name) => data.amcrestModels.get(name)!);
 const related: Firmware[] = redirect ? [] : relatedFirmwares(data, fw);
 
-const highlights = devices
-  .filter((d) => !d.generic)
-  .slice(0, 3)
-  .map((d) => d.name);
+const highlights = devices.filter((d) => !d.generic).map((d) => d.name);
+const built = fw.vendor || date ? `${fw.vendor ? `${fw.vendor} firmware` : "Firmware"}${date ? ` built ${date}` : ""}` : null;
 const compatibility =
-  devices.length > 0
-    ? `May be compatible with ${plural(devices.length, "device")}${highlights.length ? `, including ${highlights.join(", ")}` : ""}.`
-    : "No device compatibility data yet.";
-// Meta description names the file; the on-page summary doesn't repeat the H1.
-const description = `Download ${fw.displayName}${fw.vendor ? `, a ${fw.vendor} firmware` : ""}${date ? ` built ${date}` : ""}. ${compatibility}`;
-const summary = `${fw.vendor ? `${fw.vendor} firmware` : "Firmware"}${date ? ` built ${date}` : ""}. ${compatibility}`;
+  devices.length > 0 ? `May work with ${plural(devices.length, "device")}` : "No device compatibility data yet";
+// The meta description leads with the exact filename (what people search for); the on-page
+// summary skips it because the H1 already shows it.
+const lead = built ? `${fw.displayName}: ${built}. ${compatibility}` : `${fw.displayName} firmware. ${compatibility}`;
+const description =
+  devices.length > 0 ? describeWithList(lead, highlights) : clampDescription(`${lead}.`);
+const summaryLead = built ? `${built}. ${compatibility}` : compatibility;
+const summary =
+  devices.length > 0 ? describeWithList(summaryLead, highlights.slice(0, 3), "including", 300) : `${summaryLead}.`;
 
 const jsonLd = [
   {
@@ -64,7 +65,7 @@ const jsonLd = [
     <Redirect to={paths.firmware(fw)} />
   ) : (
     <BaseLayout
-      title={`${fw.displayName} download`}
+      title={fw.title}
       description={description}
       jsonLd={jsonLd}
       breadcrumbs={[

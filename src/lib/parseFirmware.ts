@@ -2,6 +2,8 @@ import { safeDecode } from "./slug";
 
 export interface FirmwareMeta {
   vendor: string | null;
+  /** Model/platform part of the filename, e.g. "IPC-HX5X3X-Rhea". */
+  model: string | null;
   version: string | null;
   /** ISO date (YYYY-MM-DD) parsed from the filename, if any. */
   buildDate: string | null;
@@ -56,10 +58,20 @@ function parseVersion(name: string): string | null {
   return match ? match[1] : null;
 }
 
+function parseModel(name: string): string | null {
+  const tokens = name.replace(/\.(bin|zip|rar|img|tar|gz|sw|iav)(\.bin)?$/i, "").split("_");
+  // Skip leading build numbers ("1926756_") and vendor prefixes ("DH_", "General_").
+  while (tokens.length && (/^\d{5,}$/.test(tokens[0]) || tokens[0].toLowerCase() in VENDOR_PREFIXES)) tokens.shift();
+  const model = tokens[0];
+  if (!model || model.length < 3 || /^V\d/i.test(model)) return null;
+  return model;
+}
+
 export function parseFirmwareName(filename: string): FirmwareMeta {
   const name = safeDecode(filename);
   return {
     vendor: parseVendor(name),
+    model: parseModel(name),
     version: parseVersion(name),
     buildDate: parseBuildDate(name),
   };

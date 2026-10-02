@@ -3,7 +3,7 @@ import "@/styles/global.css";
 import Header from "@/components/Header.astro";
 import Footer from "@/components/Footer.astro";
 import Breadcrumbs, { type Crumb } from "@/components/Breadcrumbs.astro";
-import { SITE_NAME } from "@/lib/site";
+import { SITE_NAME, clampDescription } from "@/lib/site";
 
 interface Props {
   /** Page-specific title; the site name is appended automatically. */
@@ -17,8 +17,11 @@ interface Props {
   hideHeaderSearch?: boolean;
 }
 
-const { title, description, breadcrumbs, jsonLd = [], noindex = false, hideHeaderSearch = false } = Astro.props;
-const fullTitle = title === SITE_NAME ? title : `${title} | ${SITE_NAME}`;
+const { title, breadcrumbs, jsonLd = [], noindex = false, hideHeaderSearch = false } = Astro.props;
+// Only add the site name when the result still fits in a search result (~60 characters).
+const withSite = `${title} | ${SITE_NAME}`;
+const fullTitle = title === SITE_NAME || withSite.length > 60 ? title : withSite;
+const description = clampDescription(Astro.props.description);
 const canonical = new URL(Astro.url.pathname, Astro.site).href;
 
 const structuredData = [...jsonLd];
