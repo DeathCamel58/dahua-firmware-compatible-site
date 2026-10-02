@@ -3,7 +3,7 @@ import "@/styles/global.css";
 import Header from "@/components/Header.astro";
 import Footer from "@/components/Footer.astro";
 import Breadcrumbs, { type Crumb } from "@/components/Breadcrumbs.astro";
-import { SITE_NAME, clampDescription } from "@/lib/site";
+import { GA_MEASUREMENT_ID, SITE_NAME, clampDescription } from "@/lib/site";
 
 interface Props {
   /** Page-specific title; the site name is appended automatically. */
@@ -49,7 +49,7 @@ if (breadcrumbs && breadcrumbs.length > 0) {
     <link rel="canonical" href={canonical} />
     {noindex && <meta name="robots" content="noindex, follow" />}
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="sitemap" href="/sitemap-index.xml" />
+    <link rel="sitemap" href="/sitemap.xml" />
     <meta name="theme-color" content="#f7f8fa" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0d1117" media="(prefers-color-scheme: dark)" />
 
@@ -61,6 +61,22 @@ if (breadcrumbs && breadcrumbs.length > 0) {
     <meta name="twitter:card" content="summary" />
 
     {structuredData.map((data) => <script type="application/ld+json" set:html={JSON.stringify(data)} />)}
+
+    {
+      /* Google tag (gtag.js). Production builds only, so local dev doesn't record visits. */
+      import.meta.env.PROD && (
+        <>
+          <script is:inline async src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}></script>
+          <script
+            is:inline
+            set:html={`window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', '${GA_MEASUREMENT_ID}');`}
+          />
+        </>
+      )
+    }
   </head>
   <body class="flex min-h-screen flex-col">
     <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 btn-primary">
