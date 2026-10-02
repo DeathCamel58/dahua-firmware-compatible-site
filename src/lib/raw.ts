@@ -8,6 +8,8 @@ import { safeDecode } from "./slug";
 export type Platform = "dahua" | "hikvision" | "unknown";
 export type AnalysisStatus = "ok" | "no_ids" | "extract_failed" | "not_dahua" | "duplicate" | "pending";
 export type UrlStatus = "ok" | "dead" | "error" | "unchecked";
+/** vendor: the vendor's own download page; mirror: a file server holding copies; archive: a Wayback Machine capture. */
+export type ListingKind = "vendor" | "mirror" | "archive";
 
 export interface Hardware {
   /** Single devices, e.g. IPC-HFW1230S1-A-S6. */
@@ -36,6 +38,10 @@ export interface RawListing {
   url_status: UrlStatus | null;
   /** Reconstructed from old data rather than seen on a vendor page. */
   inferred: boolean;
+  kind: ListingKind | null;
+  /** Archive listings only: where the file was originally published, and when it was captured. */
+  original_url: string | null;
+  archived_at: string | null;
 }
 
 export interface RawEntry {
@@ -46,6 +52,9 @@ export interface RawEntry {
   url: string | null;
   vendors: string[];
   listings: RawListing[];
+  /** false: a vendor lists it, but there's no file to get (e.g. links that need a login). */
+  downloadable: boolean;
+  listing_only_reason: string | null;
   firmware_version: string | null;
   release_date: string | null;
   changelog: string | null;
@@ -164,6 +173,9 @@ function readListing(l: Json): RawListing {
     latest: typeof l.latest === "boolean" ? l.latest : null,
     url_status: urlStatus && URL_STATUSES.has(urlStatus) ? urlStatus : null,
     inferred: /found in an earlier scrape\)$/.test(source),
+    kind: str(l.kind) === "vendor" || str(l.kind) === "mirror" || str(l.kind) === "archive" ? (l.kind as ListingKind) : null,
+    original_url: validUrl(l.original_url),
+    archived_at: isoDate(l.archived_at),
   };
 }
 
@@ -184,6 +196,9 @@ function inferListing(camera: Json, vendor: string | null, url: string | null): 
     latest: null,
     url_status: null,
     inferred: true,
+    kind: null,
+    original_url: null,
+    archived_at: null,
   };
 }
 
@@ -232,6 +247,8 @@ function readEntry(filename: string, camera: Json | undefined, compat: unknown):
     url,
     vendors,
     listings,
+    downloadable: c.downloadable !== false,
+    listing_only_reason: str(c.listing_only_reason),
     firmware_version: str(c.firmware_version),
     release_date: isoDate(c.release_date),
     changelog: validUrl(c.changelog),
@@ -265,13 +282,18 @@ export function readEntries(cameras: Record<string, unknown>, compatible: Record
   return names
     .map((name) => readEntry(name, cameras[name] as Json | undefined, compatible[name]))
     .filter(
-      (e) => e.filename in compatible || e.url || e.archive_url || e.listings.some((l) => l.url) || e.duplicate_of,
+      (e) =>
+        e.filename in compatible || e.url || e.archive_url || e.listings.some((l) => l.url) || e.duplicate_of || !e.downloadable,
     );
 }
 
-/** Human label for a download host. */
-export function hostLabel(url: string): string {
+/** Hosting platforms whose subdomains say nothing to a visitor (e.g. Montavue's *.workers.dev server). */
+const GENERIC_HOSTS = /\.(workers\.dev|pages\.dev|netlify\.app|vercel\.app|herokuapp\.com|cloudfront\.net)$/;
+
+/** Human label for a download host. `vendor` is used for generic hosting addresses. */
+export function hostLabel(url: string, vendor?: string | null): string {
   const host = hostOf(url) ?? url;
+  if (GENERIC_HOSTS.test(host)) return vendor ? `${vendor}'s download server` : "vendor download server";
   if (host === "mega.nz" || host.endsWith(".mega.nz")) return "MEGA";
   if (host.endsWith("drive.google.com") || host === "drive.usercontent.google.com") return "Google Drive";
   if (host.endsWith(".sharepoint.com")) return "SharePoint";

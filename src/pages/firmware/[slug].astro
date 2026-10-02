@@ -95,8 +95,12 @@ const linkBadge = (l: Listing) =>
       : l.urlStatus === "ok"
         ? { text: "Link checked", warn: false }
         : null;
+const KIND_TEXT = { vendor: "Available from", mirror: "Mirrored by", archive: "Recovered from the Wayback Machine" } as const;
+const LINK_TEXT = { vendor: "Vendor link", mirror: "Mirror link", archive: "Wayback Machine copy" } as const;
 const listingTags = (l: Listing) =>
   [
+    l.kind === "mirror" ? "Mirror" : null,
+    l.kind === "archive" ? "Wayback copy" : null,
     l.latest === true && !l.delisted ? "Current" : null,
     l.latest === false ? "Previous version" : null,
     l.delisted ? "No longer listed" : null,
@@ -175,6 +179,10 @@ const checksums = [
                     </>
                   )}
                 </>
+              ) : fw.download.kind === "wayback" ? (
+                <>
+                  Recovered from the <strong class="text-fg">Wayback Machine</strong>: the original link no longer works
+                </>
               ) : (
                 <>
                   From <span class="font-mono">{fw.download.label}</span>
@@ -182,6 +190,12 @@ const checksums = [
               )}
             </p>
           </div>
+        ) : !fw.downloadable ? (
+          <p class="text-muted">
+            <strong class="text-fg">Known, but not downloadable.</strong>{" "}
+            {(fw.listingOnlyReason ?? "A vendor lists this firmware, but the file can't be fetched").replace(/[.\s]*$/, ".")} If
+            you have a copy, please get in touch.
+          </p>
         ) : (
           <p class="text-muted">No working download link is known for this file.</p>
         )}
@@ -237,6 +251,7 @@ const checksums = [
                       <VendorLogo brand={null} name="?" height={24} />
                     )}
                     <div class="min-w-0 text-sm">
+                      <p class="text-xs text-muted">{KIND_TEXT[l.kind ?? "vendor"]}</p>
                       <p class="font-semibold">{l.vendor ?? "Unknown vendor"}</p>
                       <p class="text-xs text-muted">{l.source}</p>
                     </div>
@@ -253,6 +268,13 @@ const checksums = [
                       ))}
                     </div>
                   </div>
+                  {l.kind === "archive" && (l.originalUrl || l.archivedAt) && (
+                    <p class="text-xs text-muted">
+                      {l.archivedAt && <>Captured {formatDate(l.archivedAt)}</>}
+                      {l.archivedAt && l.originalUrl && " from "}
+                      {l.originalUrl && <code class="break-all">{l.originalUrl}</code>}
+                    </p>
+                  )}
                   {l.aliasFilename && (
                     <p class="text-xs text-muted">
                       Published as <code class="break-all">{l.aliasFilename}</code> (an identical file)
@@ -280,7 +302,7 @@ const checksums = [
                   {l.url && (
                     <p class="mt-auto flex flex-wrap items-center gap-2 text-sm">
                       <a href={l.url} rel="nofollow noopener" class:list={[l.urlStatus === "dead" && "text-muted line-through"]}>
-                        Vendor link ({l.hostLabel})
+                        {LINK_TEXT[l.kind ?? "vendor"]} ({l.kind === "archive" ? "web.archive.org" : l.hostLabel})
                       </a>
                       {badge && (
                         <span
@@ -338,7 +360,9 @@ const checksums = [
                 ? "The file unpacked fine, but it has no list of supported hardware. That's common for MCU, access-control and thermal firmware."
                 : fw.analysis === "extract_failed"
                   ? `The file couldn't be unpacked${fw.analysisError ? ` (${fw.analysisError})` : ""}.`
-                  : "Analysis pending: this file hasn't been downloaded and checked yet."}
+                  : !fw.downloadable
+                    ? "There's no file to analyse, because it can't be downloaded."
+                    : "Analysis pending: this file hasn't been downloaded and checked yet."}
           </p>
         )}
       </section>

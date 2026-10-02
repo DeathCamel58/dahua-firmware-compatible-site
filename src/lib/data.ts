@@ -8,6 +8,7 @@ import {
   readEntries,
   type AnalysisStatus,
   type Hardware,
+  type ListingKind,
   type Platform,
   type RawEntry,
   type RawListing,
@@ -57,6 +58,11 @@ export interface Listing {
   /** The vendor page no longer lists the file: its last_seen is older than the newest run that scraped that page. */
   delisted: boolean;
   inferred: boolean;
+  /** vendor page, mirror (a file server holding copies) or archive (Wayback Machine capture). */
+  kind: ListingKind | null;
+  /** Archive listings: the original URL and when the Wayback Machine captured it. */
+  originalUrl: string | null;
+  archivedAt: string | null;
   /** Set when this listing belongs to an identical copy published under another file name. */
   aliasFilename: string | null;
 }
@@ -64,8 +70,8 @@ export interface Listing {
 export interface Download {
   url: string;
   label: string;
-  /** Internet Archive copy (permanent) or a vendor's own link. */
-  kind: "archive" | "vendor";
+  /** archive: the pipeline's own Internet Archive item; wayback: a Wayback Machine capture; vendor: a vendor or mirror link. */
+  kind: "archive" | "wayback" | "vendor";
 }
 
 export interface Firmware {
@@ -83,6 +89,9 @@ export interface Firmware {
   dateSource: "vendor" | "filename" | null;
   vendors: string[];
   listings: Listing[];
+  /** false: listed by a vendor, but there's no file anyone can download (see listingOnlyReason). */
+  downloadable: boolean;
+  listingOnlyReason: string | null;
   /** Other file names with byte-identical content; their URLs redirect here. */
   aliases: string[];
   platform: Platform | null;
@@ -103,7 +112,7 @@ export interface Firmware {
   sha256: string | null;
   archiveUrl: string | null;
   archiveItem: string | null;
-  /** Best link to offer: the Internet Archive copy, else the first vendor link that isn't known to be dead. */
+  /** Best link to offer: the Internet Archive item, else a working vendor link, then a mirror, then a Wayback capture. */
   download: Download | null;
   /** Earliest first_seen across listings. */
   firstSeen: string | null;
@@ -294,7 +303,7 @@ function toListing(raw: RawListing, sourceLastRun: Map<string, string>, aliasFil
     series: raw.series,
     notes: raw.notes,
     url: raw.url,
-    hostLabel: raw.url ? hostLabel(raw.url) : null,
+    hostLabel: raw.url ? hostLabel(raw.url, raw.vendor) : null,
     version: raw.firmware_version,
     date: raw.release_date,
     changelog: raw.changelog,
@@ -306,15 +315,31 @@ function toListing(raw: RawListing, sourceLastRun: Map<string, string>, aliasFil
     // all of its firmware look delisted.
     delisted: !!(raw.last_seen && raw.last_seen < (sourceLastRun.get(raw.source) ?? raw.last_seen)),
     inferred: raw.inferred,
+    kind: raw.kind,
+    originalUrl: raw.original_url,
+    archivedAt: raw.archived_at,
     aliasFilename,
   };
 }
 
+/** Order to offer links in: the vendor's own page, then mirrors, then Wayback captures. */
+const KIND_RANK: Record<ListingKind, number> = { vendor: 0, mirror: 1, archive: 2 };
+
 function pickDownload(archiveUrl: string | null, listings: Listing[], fallbackUrl: string | null): Download | null {
   if (archiveUrl) return { url: archiveUrl, label: "Internet Archive", kind: "archive" };
-  const live =
-    listings.find((l) => l.url && l.urlStatus === "ok") ?? listings.find((l) => l.url && l.urlStatus !== "dead");
-  if (live?.url) return { url: live.url, label: live.hostLabel ?? "vendor", kind: "vendor" };
+  // Links checked as working first, then by kind; links known to be dead are never offered.
+  const best = listings
+    .filter((l) => l.url && l.urlStatus !== "dead")
+    .sort(
+      (a, b) =>
+        Number(b.urlStatus === "ok") - Number(a.urlStatus === "ok") ||
+        KIND_RANK[a.kind ?? "vendor"] - KIND_RANK[b.kind ?? "vendor"],
+    )[0];
+  if (best?.url) {
+    return best.kind === "archive"
+      ? { url: best.url, label: "Wayback Machine", kind: "wayback" }
+      : { url: best.url, label: best.hostLabel ?? "vendor", kind: "vendor" };
+  }
   if (fallbackUrl && !listings.some((l) => l.url === fallbackUrl && l.urlStatus === "dead")) {
     return { url: fallbackUrl, label: hostLabel(fallbackUrl), kind: "vendor" };
   }
@@ -382,6 +407,8 @@ async function buildData(): Promise<SiteData> {
         (v): v is string => !!v,
       )),
       listings,
+      downloadable: e.downloadable,
+      listingOnlyReason: e.listing_only_reason,
       aliases: unique([...e.aliases, ...copies.map((c) => c.filename)]).filter((a) => a !== e.filename),
       platform: e.platform,
       truncated: e.integrity?.status === "truncated" || e.analysis.truncated,
@@ -399,7 +426,7 @@ async function buildData(): Promise<SiteData> {
       sha256: e.sha256,
       archiveUrl: e.archive_url,
       archiveItem: e.archive_item,
-      download: pickDownload(e.archive_url, listings, e.url),
+      download: e.downloadable ? pickDownload(e.archive_url, listings, e.url) : null,
       firstSeen: listings.map((l) => l.firstSeen).filter((d): d is string => !!d).sort()[0] ?? null,
     });
   }
@@ -606,6 +633,7 @@ export function formatSize(bytes: number | null): string | null {
 
 /** Short label for why a firmware has no device list. */
 export function analysisLabel(fw: Firmware): string {
+  if (!fw.downloadable) return "Not downloadable";
   if (fw.platform === "hikvision") return "Hikvision firmware";
   switch (fw.analysis) {
     case "ok":

@@ -581,6 +581,20 @@
     "notes": "Black ZUUM wordmark from ZuumMedia (security systems distributor) header. White footer version at alt/zuum-white.svg."
   },
   {
+    "name": "ASM",
+    "slug": "asm",
+    "status": "reseller",
+    "statusNote": "Czech distributor (ASM 100MEGA Distribution); its file server ftp.asm.cz mirrors Dahua firmware. A vendor in the firmware data, not in IPVM's OEM list",
+    "website": "https://www.asm.cz",
+    "logo": "/logos/asm.png",
+    "background": "light",
+    "width": 213,
+    "height": 50,
+    "source": "https://www.asm.cz/img/logo_asm.png",
+    "quality": "official-raster",
+    "notes": "Colour header logo; already transparent. The site's larger logos are white-only footer variants."
+  },
+  {
     "name": "EmpireTech",
     "slug": "empiretech",
     "status": "reseller",
