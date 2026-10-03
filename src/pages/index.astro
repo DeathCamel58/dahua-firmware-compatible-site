@@ -4,11 +4,13 @@ import Chips from "@/components/Chips.astro";
 import FirmwareList from "@/components/FirmwareList.astro";
 import Search from "@/components/Search.astro";
 import VendorLogo from "@/components/VendorLogo.astro";
+import { changelogAnchor, getChangelog } from "@/lib/changelog";
 import Warning from "@/components/Warning.astro";
 import { getData, lastmodOf, paths } from "@/lib/data";
 import { CONTACT_URL, SITE_NAME, SITE_TAGLINE, composeDescription, plural } from "@/lib/site";
 
 const data = await getData();
+const latestChange = (await getChangelog())[0];
 const newest = data.firmwareList.slice(0, 6);
 const topFamilies = [...data.families.values()]
   .filter((f) => f.name !== "Other")
@@ -51,6 +53,18 @@ const jsonLd = [
   hideHeaderSearch
 >
   <section class="mx-auto max-w-3xl py-6 text-center sm:py-12">
+    {
+      latestChange && (
+        <a
+          href={`/changelog/#${changelogAnchor(latestChange)}`}
+          class="mb-5 inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-sm text-fg no-underline hover:border-accent hover:no-underline"
+        >
+          <span class="rounded-full bg-accent-soft px-2 py-0.5 text-xs font-semibold text-accent">New</span>
+          {latestChange.data.title}
+          <span aria-hidden="true" class="text-muted">→</span>
+        </a>
+      )
+    }
     <h1 class="text-3xl font-bold tracking-tight text-balance sm:text-5xl">Find firmware for your Dahua device</h1>
     <p class="mt-4 text-lg text-muted text-balance">
       Look up which firmware files may be compatible with your Dahua, Amcrest or Lorex camera, NVR or DVR, then

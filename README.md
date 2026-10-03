@@ -23,11 +23,28 @@ The format is documented in that repo's `docs/FIRMWARE_DATA.md`. `src/lib/raw.ts
 | `/vendor/<slug>/` | One page per vendor: its current and previous firmware, and its models |
 | `/device/family/<slug>/`, `/firmware/year/<year>/` | Browse hubs |
 | `/new/`, `/feed.xml` | Newly added firmware (by first appearance on a vendor page) and its RSS feed |
+| `/changelog/`, `/changelog/feed.xml` | Hand-written notes on what's new or changed, and their RSS feed |
 | `/search/` | Client-side search |
 | `/search-index.json` | Search index, generated at build time |
 | `/camera/<Name>/`, `/firmware/<Raw_Name>/` | Redirect stubs for URLs from the old Next.js site |
 
 Search runs entirely in the browser. The index is only downloaded once someone focuses a search box.
+
+## Changelog
+
+`/changelog/` (and `/changelog/feed.xml`) is built from Markdown files in `src/content/changelog/`, one per entry. Add a file such as `src/content/changelog/2026-11-01-new-vendor.md`:
+
+```md
+---
+title: Added Uniview-made models from Example Vendor
+date: 2026-11-01
+category: data # site | data | fix
+---
+
+What changed, in a few sentences or a list. Links like [Newly added](/new/) work.
+```
+
+The newest entry also appears as a "New" link above the home page headline. Individual new firmware files don't need entries; `/new/` lists those automatically.
 
 ## Development
 
