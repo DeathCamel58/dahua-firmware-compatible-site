@@ -1,0 +1,164 @@
+---
+import { formatDate, formatSize, paths, type Firmware, type SiteData } from "@/lib/data";
+import { plural } from "@/lib/site";
+
+interface Props {
+  fw: Firmware;
+  data: SiteData;
+}
+
+const { fw, data } = Astro.props;
+
+const FORMAT_LABELS: Record<string, string> = {
+  zip: "Zip archive",
+  dh: "Dahua package (zip variant)",
+  dhsp: "Dahua PTZ package",
+  bundle: "Bundle of several firmwares",
+  other: "Other format",
+};
+const SOURCE_LABELS: Record<string, string> = {
+  install_lua: "the recorder's Install.lua partition table",
+  partition_table: "the firmware's partition table",
+  image_headers: "the image headers (only partitions this firmware writes)",
+};
+const yesNo = (value: boolean | null | undefined, yes: string, no: string) =>
+  value === true ? yes : value === false ? no : null;
+const hex = (value: string | null) => value ?? "—";
+
+// One block per firmware image; a plain firmware has a single package.
+const blocks = fw.packages.map((p) => {
+  const soc = p.soc?.name ? data.socs.get(p.soc.name) : undefined;
+  const socText = p.soc
+    ? p.soc.name
+      ? `${p.soc.vendor ? `${p.soc.vendor} ` : ""}${p.soc.name}`
+      : p.soc.candidates.length
+        ? `${p.soc.vendor ? `${p.soc.vendor}: ` : ""}one of ${p.soc.candidates.join(", ")}`
+        : p.soc.vendor
+    : null;
+  const flash = [
+    p.flashSize ? formatSize(p.flashSize) : p.flashSizeDeclared,
+    p.flashType,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const dates = p.buildDates?.earliest
+    ? p.buildDates.latest && p.buildDates.latest !== p.buildDates.earliest
+      ? `${formatDate(p.buildDates.earliest)} to ${formatDate(p.buildDates.latest)}`
+      : formatDate(p.buildDates.earliest)
+    : null;
+  const security = [
+    yesNo(p.security?.signed, "Signed", "Not signed"),
+    yesNo(p.security?.encrypted, "encrypted", "not encrypted"),
+    p.security?.baseline && `security baseline ${p.security.baseline}`,
+    p.security?.upgradeSecurityVersion && `upgrade security version ${p.security.upgradeSecurityVersion}`,
+  ].filter(Boolean);
+  const languages = p.locale?.supportedLanguages ?? [];
+  const locale = [
+    p.locale?.defaultLanguage && `${p.locale.defaultLanguage} by default`,
+    languages.length > 1 && `${languages.length} languages`,
+    p.locale?.videoStandard,
+  ].filter(Boolean);
+  const rows: { label: string; value: string | null; href?: string; title?: string }[] = [
+    { label: "SoC", value: socText, href: soc ? paths.soc(soc) : undefined },
+    { label: "Architecture", value: p.architecture },
+    { label: "OEM build", value: p.oemVendor, title: p.oemVendorChecks.length ? `Also accepts: ${p.oemVendorChecks.join(", ")}` : undefined },
+    { label: "Kernel", value: p.kernelVersion && `Linux ${p.kernelVersion}` },
+    { label: "Bootloader", value: p.bootloaderVersion },
+    { label: "Flash", value: flash || null },
+    { label: "Image dates", value: dates },
+    { label: "Security", value: security.length ? security.join(", ") : null },
+    { label: "Language & video", value: locale.length ? locale.join(" · ") : null, title: languages.join(", ") || undefined },
+    { label: "Software version", value: p.softwareVersion },
+    { label: "Market area", value: p.marketArea },
+  ].filter((row) => row.value);
+  return { p, rows, languages };
+});
+const hasDetails = blocks.some((b) => b.rows.length || b.p.partitions.length);
+---
+
+{
+  hasDetails && (
+    <section class="mb-8" aria-labelledby="tech-heading">
+      <h2 id="tech-heading" class="section-title">Technical details</h2>
+      <p class="mb-3 text-sm text-muted">
+        Read from inside the firmware{fw.packageFormat && FORMAT_LABELS[fw.packageFormat] ? ` (${FORMAT_LABELS[fw.packageFormat].toLowerCase()})` : ""}.
+        {blocks.length > 1 && ` This file bundles ${blocks.length} firmware images.`}
+      </p>
+      <div class="space-y-4">
+        {blocks.map(({ p, rows, languages }) => (
+          <div class="card p-4">
+            {blocks.length > 1 && <h3 class="mb-3 font-mono text-sm font-semibold break-all">{p.firmware ?? "Firmware image"}</h3>}
+            {rows.length > 0 && (
+              <dl class="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[10rem_1fr]">
+                {rows.map((row) => (
+                  <>
+                    <dt class="text-muted">{row.label}</dt>
+                    <dd class="min-w-0 break-words" title={row.title}>
+                      {row.href ? <a href={row.href}>{row.value}</a> : row.value}
+                    </dd>
+                  </>
+                ))}
+              </dl>
+            )}
+            {languages.length > 1 && (
+              <details class="mt-3 text-sm">
+                <summary class="cursor-pointer text-muted">Supported languages ({languages.length})</summary>
+                <p class="mt-2">{languages.join(", ")}</p>
+              </details>
+            )}
+            {p.partitions.length > 0 && (
+              <details class="mt-3 text-sm">
+                <summary class="cursor-pointer text-muted">
+                  Flash layout: {plural(p.partitions.length, "partition")}
+                  {p.partitions.some((x) => x.upgraded) && `, ${p.partitions.filter((x) => x.upgraded).length} written by this firmware`}
+                </summary>
+                {p.partitionSource && SOURCE_LABELS[p.partitionSource] && (
+                  <p class="mt-2 text-xs text-muted">From {SOURCE_LABELS[p.partitionSource]}{p.partitionTable && ` (${p.partitionTable})`}.</p>
+                )}
+                <div class="mt-2 overflow-x-auto">
+                  <table class="w-full min-w-[40rem] font-mono text-xs whitespace-nowrap">
+                    <thead class="text-left text-muted">
+                      <tr>
+                        <th scope="col" class="py-1 pr-3 font-medium">Partition</th>
+                        <th scope="col" class="py-1 pr-3 font-medium">Start</th>
+                        <th scope="col" class="py-1 pr-3 font-medium">End</th>
+                        <th scope="col" class="py-1 pr-3 text-right font-medium">Size</th>
+                        <th scope="col" class="py-1 pr-3 font-medium">Image</th>
+                        <th scope="col" class="py-1 pr-3 font-medium">Filesystem</th>
+                        <th scope="col" class="py-1 font-medium">Built</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-border">
+                      {p.partitions.map((x) => (
+                        <tr class:list={[!x.upgraded && "text-muted"]}>
+                          <td class="py-1 pr-3">
+                            {x.name}
+                            {x.readOnly && <span class="ml-1 text-muted" title="Read-only">(ro)</span>}
+                          </td>
+                          <td class="py-1 pr-3">{hex(x.start)}</td>
+                          <td class="py-1 pr-3">{hex(x.end)}</td>
+                          <td class="py-1 pr-3 text-right">{formatSize(x.size) ?? "—"}</td>
+                          <td class="py-1 pr-3">{x.image ?? "not written"}</td>
+                          <td class="py-1 pr-3">{x.filesystem ?? "—"}</td>
+                          <td class="py-1">{x.built ?? "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            )}
+          </div>
+        ))}
+      </div>
+      {fw.securityBaseline && (
+        <p class="mt-3 text-sm text-muted">
+          <strong class="text-fg">About the security baseline:</strong> firmware with a higher security baseline can
+          stop a device going back to older firmware. A device already on a higher baseline than {fw.securityBaseline}{" "}
+          may refuse this file, and after installing it you may not be able to downgrade to firmware with a lower
+          baseline.
+        </p>
+      )}
+    </section>
+  )
+}

@@ -2,35 +2,44 @@
 import type { GetStaticPaths } from "astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import PageHeader from "@/components/PageHeader.astro";
+import Pager from "@/components/Pager.astro";
 import { formatDate, getData, lastmodOf, paths } from "@/lib/data";
 import { composeDescription, plural } from "@/lib/site";
+import { DEVICE_PAGE_SIZE, pageOf, pageParams, pageSuffix } from "@/lib/paginate";
 
 export const getStaticPaths = (async () => {
   const data = await getData();
-  return [...data.families.entries()].map(([key, family]) => ({
-    params: { family: family.slug },
-    props: { key },
-  }));
+  return [...data.families.entries()].flatMap(([key, family]) =>
+    pageParams(family.devices.length, DEVICE_PAGE_SIZE).map(({ page, number }) => ({
+      params: { family: family.slug, page },
+      props: { key, page: number },
+    })),
+  );
 }) satisfies GetStaticPaths;
 
 const data = await getData();
 const family = data.families.get(Astro.props.key)!;
-const devices = family.devices.map((name) => {
+const list = pageOf(family.devices, Astro.props.page, DEVICE_PAGE_SIZE);
+const first = list.page === 1;
+const familyUrl = paths.family(family);
+const devices = list.items.map((name) => {
   const device = data.devices.get(name)!;
   const newest = device.firmwares.map((f) => data.firmwares.get(f)!).find((fw) => fw.date);
   return { device, newest: formatDate(newest?.date ?? null) };
 });
 
 const isOther = family.name === "Other";
-const title = isOther ? "Other Dahua devices" : `${family.name} series firmware`;
+const title = `${isOther ? "Other Dahua devices" : `${family.name} series firmware`}${pageSuffix(list.page, list.pages)}`;
 const description = isOther
   ? composeDescription([
-      `Firmware for ${plural(devices.length, "less common Dahua device")}`,
-      { lead: "Including", items: family.devices },
+      `Firmware for ${plural(family.devices.length, "less common Dahua device")}`,
+      !first && `Page ${list.page} of ${list.pages}`,
+      { lead: "Including", items: list.items },
     ])
   : composeDescription([
-      `Firmware for ${plural(devices.length, "Dahua " + family.name + " model")}`,
-      { lead: "Including", items: family.devices },
+      `Firmware for ${plural(family.devices.length, "Dahua " + family.name + " model")}`,
+      !first && `Page ${list.page} of ${list.pages}`,
+      { lead: "Including", items: list.items },
       "See which firmware files may work with each",
     ]);
 ---
@@ -39,7 +48,12 @@ const description = isOther
   title={title}
   description={description}
   lastmod={lastmodOf([...new Set(devices.flatMap(({ device }) => device.firmwares))].map((f) => data.firmwares.get(f)!))}
-  breadcrumbs={[{ name: "Home", href: "/" }, { name: "Devices", href: "/device/" }, { name: family.name }]}
+  breadcrumbs={[
+    { name: "Home", href: "/" },
+    { name: "Devices", href: "/device/" },
+    first ? { name: family.name } : { name: family.name, href: familyUrl },
+    ...(first ? [] : [{ name: `Page ${list.page}` }]),
+  ]}
 >
   <PageHeader eyebrow="Device family" title={isOther ? "Other devices" : family.name} mono={!isOther}>
     <p class="mt-3 max-w-3xl text-muted">{description}</p>
@@ -71,4 +85,5 @@ const description = isOther
       </tbody>
     </table>
   </div>
+  <Pager page={list.page} pages={list.pages} base={familyUrl} prev="← Previous" next="Next →" />
 </BaseLayout>

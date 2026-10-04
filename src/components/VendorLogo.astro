@@ -1,5 +1,7 @@
 ---
+import { Image } from "astro:assets";
 import type { Brand } from "@/lib/data";
+import { logoAsset } from "@/lib/logos";
 
 interface Props {
   brand: Brand | null;
@@ -14,20 +16,22 @@ const { brand, name, height = 28, class: className } = Astro.props;
 // Logos are drawn for one background, so give each its own tile: white for dark-ink logos and a
 // dark one for white logos, whatever the page theme is.
 const tile = brand?.background === "dark" ? "bg-[#151b23]" : "bg-white";
-const width = brand?.width && brand?.height ? Math.round((brand.width / brand.height) * height) : undefined;
+const asset = logoAsset(brand?.logo);
 ---
 
 {
-  brand?.logo ? (
+  asset ? (
     <span
       class:list={["inline-flex shrink-0 items-center justify-center rounded-md px-2 py-1 ring-1 ring-border", tile, className]}
       style={`height:${height + 8}px`}
     >
-      <img
-        src={brand.logo}
+      {/* Rasters are resized at build time to WebP (1x and 2x for sharp screens); SVGs pass through. */}
+      <Image
+        src={asset}
         alt={`${name} logo`}
         height={height}
-        width={width}
+        densities={asset.format === "svg" ? undefined : [1, 2]}
+        format={asset.format === "svg" ? "svg" : "webp"}
         loading="lazy"
         decoding="async"
         class="h-full w-auto max-w-[9rem] object-contain"

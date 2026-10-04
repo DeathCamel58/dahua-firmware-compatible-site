@@ -22,3 +22,6 @@ npm-debug.log*
 # leftovers from the old Next.js setup
 .next/
 next-env.d.ts
+
+# firmware data checked out by the deploy workflow (or locally, for testing)
+.pipeline-data/

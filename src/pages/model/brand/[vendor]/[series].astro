@@ -1,0 +1,46 @@
+---
+import type { GetStaticPaths } from "astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import Chips from "@/components/Chips.astro";
+import PageHeader from "@/components/PageHeader.astro";
+import { MODELS_PER_PAGE_LIMIT, getData, groupBySeries, lastmodOf, paths } from "@/lib/data";
+import { composeDescription, plural } from "@/lib/site";
+
+// Only big catalogues are split into series pages (see the brand index).
+export const getStaticPaths = (async () => {
+  const data = await getData();
+  return [...data.vendors.values()]
+    .filter((v) => v.models.length > MODELS_PER_PAGE_LIMIT)
+    .flatMap((v) => groupBySeries(v.models).map((s) => ({ params: { vendor: v.slug, series: s.slug }, props: { name: v.name, key: s.key } })));
+}) satisfies GetStaticPaths;
+
+const data = await getData();
+const vendor = data.vendors.get(Astro.props.name)!;
+const series = groupBySeries(vendor.models).find((s) => s.key === Astro.props.key)!;
+const models = series.items.map((n) => data.models.get(n)).filter((m) => !!m);
+const firmwares = [...new Set(models.flatMap((m) => m.firmwares))].map((f) => data.firmwares.get(f)!);
+const label = series.key === "OTHER" ? `Other ${vendor.name} models` : `${vendor.name} ${series.name} models`;
+---
+
+<BaseLayout
+  title={`${label}: firmware`}
+  description={composeDescription([
+    `Firmware for ${plural(models.length, series.key === "OTHER" ? `other ${vendor.name} model` : `${vendor.name} ${series.name} model`)}`,
+    { lead: "Including", items: models.map((m) => m.name) },
+  ])}
+  lastmod={lastmodOf(firmwares)}
+  breadcrumbs={[
+    { name: "Home", href: "/" },
+    { name: "Retail models", href: "/model/" },
+    { name: vendor.name, href: paths.modelBrand(vendor) },
+    { name: series.name },
+  ]}
+>
+  <PageHeader eyebrow={`${vendor.name} models`} title={series.key === "OTHER" ? "Other models" : series.name} mono={series.key !== "OTHER"}>
+    <p class="mt-3 max-w-3xl text-muted">
+      {plural(models.length, "model")} in this series. Pick one to see its firmware and the Dahua hardware it runs on.
+    </p>
+  </PageHeader>
+
+  <Chips items={models.map((m) => ({ name: m.name, href: paths.model(m) }))} />
+</BaseLayout>

@@ -22,9 +22,10 @@ export function slugify(value: string): string {
  * Assign unique slugs to a list of names. Names are processed in sorted order so the
  * same input always produces the same slugs, keeping URLs stable between builds.
  */
-export function assignSlugs(names: Iterable<string>): Map<string, string> {
+export function assignSlugs(names: Iterable<string>, reserved: Iterable<string> = []): Map<string, string> {
   const result = new Map<string, string>();
-  const used = new Set<string>();
+  // Reserved slugs are taken by other routes at the same level (e.g. /model/brand/).
+  const used = new Set<string>(reserved);
   for (const name of [...new Set(names)].sort()) {
     const base = slugify(name);
     let slug = base;

@@ -2,32 +2,44 @@
 import type { GetStaticPaths } from "astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import Chips from "@/components/Chips.astro";
+import Pager from "@/components/Pager.astro";
 import FirmwareList from "@/components/FirmwareList.astro";
 import PageHeader from "@/components/PageHeader.astro";
 import Stats from "@/components/Stats.astro";
 import { collect, formatDate, getData, lastmodOf, paths, retailNames, similarDevices } from "@/lib/data";
 import { composeDescription, plural } from "@/lib/site";
+import { FIRMWARE_PAGE_SIZE, pageOf, pageParams, pageSuffix } from "@/lib/paginate";
 
 export const getStaticPaths = (async () => {
   const data = await getData();
-  return [...data.devices.values()].map((device) => ({
-    params: { slug: device.slug },
-    props: { name: device.name },
-  }));
+  // Long lists (a board family like IPC-HX3XXX has hundreds of files) are split into pages:
+  // /device/<slug>/, then /device/<slug>/2/…
+  return [...data.devices.values()].flatMap((device) =>
+    pageParams(device.firmwares.length, FIRMWARE_PAGE_SIZE).map(({ page, number }) => ({
+      params: { slug: device.slug, page },
+      props: { name: device.name, page: number },
+    })),
+  );
 }) satisfies GetStaticPaths;
 
 const data = await getData();
 const device = data.devices.get(Astro.props.name)!;
 const firmwares = device.firmwares.map((filename) => data.firmwares.get(filename)!);
+const list = pageOf(firmwares, Astro.props.page, FIRMWARE_PAGE_SIZE);
+const first = list.page === 1;
 const newest = firmwares.find((fw) => fw.date);
 const vendors = collect(data, device.firmwares, (fw) => fw.vendors);
+const chips = collect(data, device.firmwares, (fw) => fw.socs.map((s) => s.name)).map((name) => data.socs.get(name)!);
 const similar = similarDevices(data, device);
 const models = collect(data, device.firmwares, (fw) => fw.models)
   .slice(0, 24)
   .map((name) => data.models.get(name)!);
 
 const description = composeDescription([
-  `${device.name} firmware: ${plural(firmwares.length, "file")}${vendors.length ? ` from ${vendors.join(", ")}` : ""}`,
+  // Later pages put the page number in the opening sentence, which is always kept, so each is unique.
+  first
+    ? `${device.name} firmware: ${plural(firmwares.length, "file")}${vendors.length ? ` from ${vendors.join(", ")}` : ""}`
+    : `${device.name} firmware, page ${list.page} of ${list.pages}: files ${list.from}–${list.to} of ${list.total}`,
   newest && (newest.version ? `Newest ${newest.version} (${formatDate(newest.date)})` : `Updated ${formatDate(newest.date)}`),
   { lead: "Same hardware sold as", items: retailNames(firmwares) },
   "Download links and archived copies",
@@ -35,14 +47,15 @@ const description = composeDescription([
 ---
 
 <BaseLayout
-  title={`${device.name} firmware downloads`}
+  title={`${device.name} firmware downloads${pageSuffix(list.page, list.pages)}`}
   description={description}
-  lastmod={lastmodOf(firmwares)}
+  lastmod={lastmodOf(list.items)}
   breadcrumbs={[
     { name: "Home", href: "/" },
     { name: "Devices", href: "/device/" },
     { name: device.family, href: paths.family({ slug: device.familySlug }) },
-    { name: device.name },
+    first ? { name: device.name } : { name: device.name, href: paths.device(device) },
+    ...(first ? [] : [{ name: `Page ${list.page}` }]),
   ]}
 >
   <PageHeader eyebrow={device.kind === "board" ? "Board family" : "Device"} title={device.name} mono copyable>
@@ -54,19 +67,26 @@ const description = composeDescription([
     </p>
   </PageHeader>
 
-  <Stats
+  {first && (<Stats
     stats={[
       { label: "Firmware files", value: firmwares.length },
       { label: "Newest", value: formatDate(newest?.date ?? null) },
       { label: "Family", value: device.family },
       { label: "Vendors", value: vendors.join(", ") || null },
+      { label: "Chip", value: chips.map((c) => c.name).join(", ") || null },
     ]}
-  />
+  />)}
 
 
   <section class="mb-8" aria-labelledby="firmware-heading">
     <h2 id="firmware-heading" class="section-title">Compatible firmware</h2>
-    <FirmwareList firmwares={firmwares} />
+    {list.pages > 1 && (
+      <p class="mb-3 text-sm text-muted">
+        Showing {list.from}–{list.to} of {list.total.toLocaleString("en-US")}, newest first.
+      </p>
+    )}
+    <FirmwareList firmwares={list.items} />
+    <Pager page={list.page} pages={list.pages} base={paths.device(device)} />
     <p class="mt-3 text-sm text-muted">
       Compatibility is detected automatically from firmware files and may be incomplete or wrong. Always confirm your
       device's <code>updateSerial</code> first.
@@ -74,7 +94,7 @@ const description = composeDescription([
   </section>
 
   {
-    similar.length > 0 && (
+    first && similar.length > 0 && (
       <section class="mb-8" aria-labelledby="similar-heading">
         <h2 id="similar-heading" class="section-title">Devices sharing firmware with the {device.name}</h2>
         <Chips items={similar.map((d) => ({ name: d.name, href: paths.device(d) }))} />
@@ -83,7 +103,7 @@ const description = composeDescription([
   }
 
   {
-    models.length > 0 && (
+    first && models.length > 0 && (
       <section aria-labelledby="models-heading">
         <h2 id="models-heading" class="section-title">Retail models using the same firmware</h2>
         <Chips items={models.map((m) => ({ name: m.name, href: paths.model(m) }))} />

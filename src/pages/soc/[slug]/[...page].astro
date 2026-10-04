@@ -1,0 +1,92 @@
+---
+import type { GetStaticPaths } from "astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import Chips from "@/components/Chips.astro";
+import Pager from "@/components/Pager.astro";
+import FirmwareList from "@/components/FirmwareList.astro";
+import PageHeader from "@/components/PageHeader.astro";
+import Stats from "@/components/Stats.astro";
+import { collect, formatDate, getData, lastmodOf, paths } from "@/lib/data";
+import { composeDescription, plural } from "@/lib/site";
+import { FIRMWARE_PAGE_SIZE, pageOf, pageParams, pageSuffix } from "@/lib/paginate";
+
+export const getStaticPaths = (async () => {
+  const data = await getData();
+  return [...data.socs.values()].flatMap((soc) =>
+    pageParams(soc.firmwares.length, FIRMWARE_PAGE_SIZE).map(({ page, number }) => ({
+      params: { slug: soc.slug, page },
+      props: { name: soc.name, page: number },
+    })),
+  );
+}) satisfies GetStaticPaths;
+
+const data = await getData();
+const soc = data.socs.get(Astro.props.name)!;
+const firmwares = soc.firmwares.map((f) => data.firmwares.get(f)!);
+const list = pageOf(firmwares, Astro.props.page, FIRMWARE_PAGE_SIZE);
+const first = list.page === 1;
+const newest = firmwares.find((fw) => fw.date);
+const vendors = collect(data, soc.firmwares, (fw) => fw.vendors);
+const devices = collect(data, soc.firmwares, (fw) => fw.devices).map((name) => data.devices.get(name)!);
+const archs = collect(data, soc.firmwares, (fw) =>
+  fw.packages.filter((p) => p.soc?.name === soc.name).map((p) => p.architecture).filter((a): a is string => !!a),
+);
+const kernels = collect(data, soc.firmwares, (fw) =>
+  fw.packages.filter((p) => p.soc?.name === soc.name).map((p) => p.kernelVersion).filter((k): k is string => !!k),
+).sort();
+const fullName = `${soc.vendor ? `${soc.vendor} ` : ""}${soc.name}`;
+---
+
+<BaseLayout
+  title={`${fullName} firmware${pageSuffix(list.page, list.pages)}`}
+  description={composeDescription([
+    first
+      ? `Firmware for devices built on the ${fullName}: ${plural(firmwares.length, "file")}${vendors.length ? ` from ${vendors.join(", ")}` : ""}`
+      : `${fullName} firmware, page ${list.page} of ${list.pages}: files ${list.from}–${list.to} of ${list.total}`,
+    newest && (newest.version ? `Newest ${newest.version} (${formatDate(newest.date)})` : `Updated ${formatDate(newest.date)}`),
+    { lead: "Devices include", items: devices.map((d) => d.name) },
+  ])}
+  lastmod={lastmodOf(list.items)}
+  breadcrumbs={[
+    { name: "Home", href: "/" },
+    { name: "Chips", href: "/soc/" },
+    first ? { name: soc.name } : { name: soc.name, href: paths.soc(soc) },
+    ...(first ? [] : [{ name: `Page ${list.page}` }]),
+  ]}
+>
+  <PageHeader eyebrow={soc.vendor ? `${soc.vendor} SoC` : "SoC"} title={soc.name} mono copyable>
+    <p class="mt-3 max-w-3xl text-muted">
+      {plural(firmwares.length, "firmware file")} identified as built for the <strong class="text-fg">{fullName}</strong>,
+      from {vendors.length ? vendors.join(", ") : "various vendors"}. Firmware for the same chip isn't automatically
+      compatible: always check the device's own hardware ID.
+    </p>
+  </PageHeader>
+
+  {first && (<Stats
+    stats={[
+      { label: "Firmware files", value: firmwares.length },
+      { label: "Devices", value: devices.length || null },
+      { label: "Architecture", value: archs.join(", ") || null },
+      { label: "Kernels", value: kernels.length ? (kernels.length > 2 ? `${kernels[0]} to ${kernels.at(-1)}` : kernels.join(", ")) : null },
+    ]}
+  />)}
+
+  <section class="mb-8" aria-labelledby="firmware-heading">
+    <h2 id="firmware-heading" class="section-title">Firmware</h2>
+    {list.pages > 1 && (
+      <p class="mb-3 text-sm text-muted">Showing {list.from}–{list.to} of {list.total.toLocaleString("en-US")}, newest first.</p>
+    )}
+    <FirmwareList firmwares={list.items} />
+    <Pager page={list.page} pages={list.pages} base={paths.soc(soc)} />
+  </section>
+
+  {
+    first && devices.length > 0 && (
+      <section aria-labelledby="devices-heading">
+        <h2 id="devices-heading" class="section-title">Devices using the {soc.name}</h2>
+        <p class="mb-3 text-sm text-muted">Hardware IDs found in this chip's firmware.</p>
+        <Chips items={devices.map((d) => ({ name: d.name, href: paths.device(d) }))} />
+      </section>
+    )
+  }
+</BaseLayout>

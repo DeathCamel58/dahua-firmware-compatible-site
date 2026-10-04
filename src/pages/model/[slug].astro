@@ -35,6 +35,9 @@ const brand = model.publishers.length === 1 ? model.publishers[0] : null;
 const fullName = brand && !model.name.toUpperCase().startsWith(brand.toUpperCase()) ? `${brand} ${model.name}` : model.name;
 const listedBy = model.publishers.length > 0 ? model.publishers.join(" and ") : "Its download source";
 
+// A "model" that is just a vendor's name (seen in some listings) would clash with that vendor's page.
+const clashesWithVendor = [...data.vendors.keys()].some((v) => v.toLowerCase() === model.name.toLowerCase());
+const pageTitle = clashesWithVendor ? `${model.name} (listed as a model) firmware` : `${fullName} firmware`;
 const description = composeDescription([
   `${fullName} firmware: ${plural(firmwares.length, "file")}`,
   newest && (newest.version ? `Newest ${newest.version} (${formatDate(newest.date)})` : `Updated ${formatDate(newest.date)}`),
@@ -44,7 +47,7 @@ const description = composeDescription([
 ---
 
 <BaseLayout
-  title={`${fullName} firmware`}
+  title={pageTitle}
   description={description}
   lastmod={lastmodOf(firmwares)}
   breadcrumbs={[{ name: "Home", href: "/" }, { name: "Retail models", href: "/model/" }, { name: model.name }]}

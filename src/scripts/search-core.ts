@@ -5,26 +5,29 @@
 
 /** [type, name, slug, meta] — see src/pages/search-index.json.ts */
 export type IndexEntry = [type: EntryType, name: string, slug: string, meta: string | number];
-export type EntryType = 0 | 1 | 2;
+export type EntryType = 0 | 1 | 2 | 3;
 
 export const TYPE_DEVICE = 0;
 export const TYPE_MODEL = 1;
 export const TYPE_FIRMWARE = 2;
+export const TYPE_SOC = 3;
 
 export const TYPE_LABELS: Record<EntryType, string> = {
   0: "Device",
   1: "Retail model",
   2: "Firmware",
+  3: "Chip",
 };
 
 const TYPE_PATHS: Record<EntryType, string> = {
   0: "/device/",
   1: "/model/",
   2: "/firmware/",
+  3: "/soc/",
 };
 
 // Model numbers matter more than the long filenames they appear in.
-const TYPE_BONUS: Record<EntryType, number> = { 0: 30, 1: 30, 2: 0 };
+const TYPE_BONUS: Record<EntryType, number> = { 0: 30, 1: 30, 2: 0, 3: 20 };
 
 export interface Result {
   type: EntryType;

@@ -1,0 +1,877 @@
+[
+ {
+  "path": "/camera/0050425126c18422/",
+  "kind": "device",
+  "name": "0050425126c18422"
+ },
+ {
+  "path": "/camera/080000000530002d/",
+  "kind": "device",
+  "name": "080000000530002d"
+ },
+ {
+  "path": "/camera/080000000530002e/",
+  "kind": "device",
+  "name": "080000000530002e"
+ },
+ {
+  "path": "/camera/080000400530002f/",
+  "kind": "device",
+  "name": "080000400530002f"
+ },
+ {
+  "path": "/camera/080002400531842b/",
+  "kind": "device",
+  "name": "080002400531842b"
+ },
+ {
+  "path": "/camera/0800025006118428/",
+  "kind": "device",
+  "name": "0800025006118428"
+ },
+ {
+  "path": "/camera/080002560681842a/",
+  "kind": "device",
+  "name": "080002560681842a"
+ },
+ {
+  "path": "/camera/0800425346118427/",
+  "kind": "device",
+  "name": "0800425346118427"
+ },
+ {
+  "path": "/camera/0800425346718427/",
+  "kind": "device",
+  "name": "0800425346718427"
+ },
+ {
+  "path": "/camera/0800425346718431/",
+  "kind": "device",
+  "name": "0800425346718431"
+ },
+ {
+  "path": "/camera/0800425346a18427/",
+  "kind": "device",
+  "name": "0800425346a18427"
+ },
+ {
+  "path": "/camera/0800425346f18427/",
+  "kind": "device",
+  "name": "0800425346f18427"
+ },
+ {
+  "path": "/camera/080202400531842b/",
+  "kind": "device",
+  "name": "080202400531842b"
+ },
+ {
+  "path": "/camera/0802025006118428/",
+  "kind": "device",
+  "name": "0802025006118428"
+ },
+ {
+  "path": "/camera/0802025006818428/",
+  "kind": "device",
+  "name": "0802025006818428"
+ },
+ {
+  "path": "/camera/0802425006818426/",
+  "kind": "device",
+  "name": "0802425006818426"
+ },
+ {
+  "path": "/camera/0802425346118427/",
+  "kind": "device",
+  "name": "0802425346118427"
+ },
+ {
+  "path": "/camera/0802425346718431/",
+  "kind": "device",
+  "name": "0802425346718431"
+ },
+ {
+  "path": "/camera/080402400531842b/",
+  "kind": "device",
+  "name": "080402400531842b"
+ },
+ {
+  "path": "/camera/0804025006818428/",
+  "kind": "device",
+  "name": "0804025006818428"
+ },
+ {
+  "path": "/camera/0804425006818426/",
+  "kind": "device",
+  "name": "0804425006818426"
+ },
+ {
+  "path": "/camera/0804425346118427/",
+  "kind": "device",
+  "name": "0804425346118427"
+ },
+ {
+  "path": "/camera/0804425346718431/",
+  "kind": "device",
+  "name": "0804425346718431"
+ },
+ {
+  "path": "/camera/0806025006718428/",
+  "kind": "device",
+  "name": "0806025006718428"
+ },
+ {
+  "path": "/camera/0806025006818428/",
+  "kind": "device",
+  "name": "0806025006818428"
+ },
+ {
+  "path": "/camera/0806425006818426/",
+  "kind": "device",
+  "name": "0806425006818426"
+ },
+ {
+  "path": "/camera/0808025006f18428/",
+  "kind": "device",
+  "name": "0808025006f18428"
+ },
+ {
+  "path": "/camera/0808425006818426/",
+  "kind": "device",
+  "name": "0808425006818426"
+ },
+ {
+  "path": "/camera/080c00000530002d/",
+  "kind": "device",
+  "name": "080c00000530002d"
+ },
+ {
+  "path": "/camera/080E00000530002d/",
+  "kind": "device",
+  "name": "080E00000530002d"
+ },
+ {
+  "path": "/camera/8040025606718436/",
+  "kind": "device",
+  "name": "8040025606718436"
+ },
+ {
+  "path": "/camera/8040025606f18432/",
+  "kind": "device",
+  "name": "8040025606f18432"
+ },
+ {
+  "path": "/camera/8040025606f18436/",
+  "kind": "device",
+  "name": "8040025606f18436"
+ },
+ {
+  "path": "/camera/8040025646718438/",
+  "kind": "device",
+  "name": "8040025646718438"
+ },
+ {
+  "path": "/camera/8040025646f18435/",
+  "kind": "device",
+  "name": "8040025646f18435"
+ },
+ {
+  "path": "/camera/8040425126c18423/",
+  "kind": "device",
+  "name": "8040425126c18423"
+ },
+ {
+  "path": "/camera/8040425646718437/",
+  "kind": "device",
+  "name": "8040425646718437"
+ },
+ {
+  "path": "/camera/8042025606718436/",
+  "kind": "device",
+  "name": "8042025606718436"
+ },
+ {
+  "path": "/camera/8042025606f18432/",
+  "kind": "device",
+  "name": "8042025606f18432"
+ },
+ {
+  "path": "/camera/8042025646718438/",
+  "kind": "device",
+  "name": "8042025646718438"
+ },
+ {
+  "path": "/camera/804E025646f18435/",
+  "kind": "device",
+  "name": "804E025646f18435"
+ },
+ {
+  "path": "/camera/8310425126c18423/",
+  "kind": "device",
+  "name": "8310425126c18423"
+ },
+ {
+  "path": "/camera/Dahua/",
+  "kind": "device",
+  "name": "Dahua"
+ },
+ {
+  "path": "/camera/DAHUA/",
+  "kind": "device",
+  "name": "DAHUA"
+ },
+ {
+  "path": "/camera/General_HCVR5x04-S2/",
+  "kind": "device",
+  "name": "General_HCVR5x04-S2"
+ },
+ {
+  "path": "/camera/General_HCVR5x04-V2/",
+  "kind": "device",
+  "name": "General_HCVR5x04-V2"
+ },
+ {
+  "path": "/camera/General_HCVR5x04-V4/",
+  "kind": "device",
+  "name": "General_HCVR5x04-V4"
+ },
+ {
+  "path": "/camera/General_HCVR5x08-S2/",
+  "kind": "device",
+  "name": "General_HCVR5x08-S2"
+ },
+ {
+  "path": "/camera/General_HCVR5x08-V2/",
+  "kind": "device",
+  "name": "General_HCVR5x08-V2"
+ },
+ {
+  "path": "/camera/General_HCVR5x08-V4/",
+  "kind": "device",
+  "name": "General_HCVR5x08-V4"
+ },
+ {
+  "path": "/camera/General_HCVR5x16-S2/",
+  "kind": "device",
+  "name": "General_HCVR5x16-S2"
+ },
+ {
+  "path": "/camera/General_HCVR5x16-V2/",
+  "kind": "device",
+  "name": "General_HCVR5x16-V2"
+ },
+ {
+  "path": "/camera/General_HCVR5x16-V4/",
+  "kind": "device",
+  "name": "General_HCVR5x16-V4"
+ },
+ {
+  "path": "/camera/General_HCVR7x08-4M/",
+  "kind": "device",
+  "name": "General_HCVR7x08-4M"
+ },
+ {
+  "path": "/camera/General_HCVR7x16-4M/",
+  "kind": "device",
+  "name": "General_HCVR7x16-4M"
+ },
+ {
+  "path": "/camera/General_HCVR7x16-V4/",
+  "kind": "device",
+  "name": "General_HCVR7x16-V4"
+ },
+ {
+  "path": "/camera/General_MCVR62XX/",
+  "kind": "device",
+  "name": "General_MCVR62XX"
+ },
+ {
+  "path": "/camera/General_N6/",
+  "kind": "device",
+  "name": "General_N6"
+ },
+ {
+  "path": "/camera/General_N7/",
+  "kind": "device",
+  "name": "General_N7"
+ },
+ {
+  "path": "/camera/General_XVR4x04-X1/",
+  "kind": "device",
+  "name": "General_XVR4x04-X1"
+ },
+ {
+  "path": "/camera/General_XVR5x04-I2/",
+  "kind": "device",
+  "name": "General_XVR5x04-I2"
+ },
+ {
+  "path": "/camera/General_XVR5x04-I3-B/",
+  "kind": "device",
+  "name": "General_XVR5x04-I3-B"
+ },
+ {
+  "path": "/camera/General_XVR5x04-X1/",
+  "kind": "device",
+  "name": "General_XVR5x04-X1"
+ },
+ {
+  "path": "/camera/General_XVR5x04/",
+  "kind": "device",
+  "name": "General_XVR5x04"
+ },
+ {
+  "path": "/camera/General_XVR5x08-I2/",
+  "kind": "device",
+  "name": "General_XVR5x08-I2"
+ },
+ {
+  "path": "/camera/General_XVR5x08-I3-4KL/",
+  "kind": "device",
+  "name": "General_XVR5x08-I3-4KL"
+ },
+ {
+  "path": "/camera/General_XVR5x08-I3-B/",
+  "kind": "device",
+  "name": "General_XVR5x08-I3-B"
+ },
+ {
+  "path": "/camera/General_XVR5x08-X/",
+  "kind": "device",
+  "name": "General_XVR5x08-X"
+ },
+ {
+  "path": "/camera/General_XVR5x08/",
+  "kind": "device",
+  "name": "General_XVR5x08"
+ },
+ {
+  "path": "/camera/General_XVR5x16-I3/",
+  "kind": "device",
+  "name": "General_XVR5x16-I3"
+ },
+ {
+  "path": "/camera/General_XVR5x16/",
+  "kind": "device",
+  "name": "General_XVR5x16"
+ },
+ {
+  "path": "/camera/General_XVR7x08-I2/",
+  "kind": "device",
+  "name": "General_XVR7x08-I2"
+ },
+ {
+  "path": "/camera/General_XVR7x08-X/",
+  "kind": "device",
+  "name": "General_XVR7x08-X"
+ },
+ {
+  "path": "/camera/General_XVR7x16-I2/",
+  "kind": "device",
+  "name": "General_XVR7x16-I2"
+ },
+ {
+  "path": "/camera/General_XVR7x16-X/",
+  "kind": "device",
+  "name": "General_XVR7x16-X"
+ },
+ {
+  "path": "/camera/General_XVR7x16/",
+  "kind": "device",
+  "name": "General_XVR7x16"
+ },
+ {
+  "path": "/camera/General_XVR7x32-I2/",
+  "kind": "device",
+  "name": "General_XVR7x32-I2"
+ },
+ {
+  "path": "/camera/General_XVR8x16-4KL-I/",
+  "kind": "device",
+  "name": "General_XVR8x16-4KL-I"
+ },
+ {
+  "path": "/camera/General/",
+  "kind": "device",
+  "name": "General"
+ },
+ {
+  "path": "/camera/V2.626.0000000.4.R.220718/",
+  "kind": "device",
+  "name": "V2.626.0000000.4.R.220718"
+ },
+ {
+  "path": "/camera/V2.626.00AC002.0.R.230911/",
+  "kind": "device",
+  "name": "V2.626.00AC002.0.R.230911"
+ },
+ {
+  "path": "/camera/V2.626.00AC003.0.R.241216/",
+  "kind": "device",
+  "name": "V2.626.00AC003.0.R.241216"
+ },
+ {
+  "path": "/camera/V2.626.00AC004.0.R.250326/",
+  "kind": "device",
+  "name": "V2.626.00AC004.0.R.250326"
+ },
+ {
+  "path": "/camera/V2.626.00AC006.0.R.250325/",
+  "kind": "device",
+  "name": "V2.626.00AC006.0.R.250325"
+ },
+ {
+  "path": "/camera/V2.626.18LK003.0.R.230613/",
+  "kind": "device",
+  "name": "V2.626.18LK003.0.R.230613"
+ },
+ {
+  "path": "/device/0050425126c18422/",
+  "kind": "device",
+  "name": "0050425126c18422"
+ },
+ {
+  "path": "/device/080000000530002d/",
+  "kind": "device",
+  "name": "080000000530002d"
+ },
+ {
+  "path": "/device/080000000530002e/",
+  "kind": "device",
+  "name": "080000000530002e"
+ },
+ {
+  "path": "/device/080000400530002f/",
+  "kind": "device",
+  "name": "080000400530002f"
+ },
+ {
+  "path": "/device/080002400531842b/",
+  "kind": "device",
+  "name": "080002400531842b"
+ },
+ {
+  "path": "/device/0800025006118428/",
+  "kind": "device",
+  "name": "0800025006118428"
+ },
+ {
+  "path": "/device/080002560681842a/",
+  "kind": "device",
+  "name": "080002560681842a"
+ },
+ {
+  "path": "/device/0800425346118427/",
+  "kind": "device",
+  "name": "0800425346118427"
+ },
+ {
+  "path": "/device/0800425346718427/",
+  "kind": "device",
+  "name": "0800425346718427"
+ },
+ {
+  "path": "/device/0800425346718431/",
+  "kind": "device",
+  "name": "0800425346718431"
+ },
+ {
+  "path": "/device/0800425346a18427/",
+  "kind": "device",
+  "name": "0800425346a18427"
+ },
+ {
+  "path": "/device/0800425346f18427/",
+  "kind": "device",
+  "name": "0800425346f18427"
+ },
+ {
+  "path": "/device/080202400531842b/",
+  "kind": "device",
+  "name": "080202400531842b"
+ },
+ {
+  "path": "/device/0802025006118428/",
+  "kind": "device",
+  "name": "0802025006118428"
+ },
+ {
+  "path": "/device/0802025006818428/",
+  "kind": "device",
+  "name": "0802025006818428"
+ },
+ {
+  "path": "/device/0802425006818426/",
+  "kind": "device",
+  "name": "0802425006818426"
+ },
+ {
+  "path": "/device/0802425346118427/",
+  "kind": "device",
+  "name": "0802425346118427"
+ },
+ {
+  "path": "/device/0802425346718431/",
+  "kind": "device",
+  "name": "0802425346718431"
+ },
+ {
+  "path": "/device/080402400531842b/",
+  "kind": "device",
+  "name": "080402400531842b"
+ },
+ {
+  "path": "/device/0804025006818428/",
+  "kind": "device",
+  "name": "0804025006818428"
+ },
+ {
+  "path": "/device/0804425006818426/",
+  "kind": "device",
+  "name": "0804425006818426"
+ },
+ {
+  "path": "/device/0804425346118427/",
+  "kind": "device",
+  "name": "0804425346118427"
+ },
+ {
+  "path": "/device/0804425346718431/",
+  "kind": "device",
+  "name": "0804425346718431"
+ },
+ {
+  "path": "/device/0806025006718428/",
+  "kind": "device",
+  "name": "0806025006718428"
+ },
+ {
+  "path": "/device/0806025006818428/",
+  "kind": "device",
+  "name": "0806025006818428"
+ },
+ {
+  "path": "/device/0806425006818426/",
+  "kind": "device",
+  "name": "0806425006818426"
+ },
+ {
+  "path": "/device/0808025006f18428/",
+  "kind": "device",
+  "name": "0808025006f18428"
+ },
+ {
+  "path": "/device/0808425006818426/",
+  "kind": "device",
+  "name": "0808425006818426"
+ },
+ {
+  "path": "/device/080c00000530002d/",
+  "kind": "device",
+  "name": "080c00000530002d"
+ },
+ {
+  "path": "/device/080e00000530002d/",
+  "kind": "device",
+  "name": "080E00000530002d"
+ },
+ {
+  "path": "/device/8040025606718436/",
+  "kind": "device",
+  "name": "8040025606718436"
+ },
+ {
+  "path": "/device/8040025606f18432/",
+  "kind": "device",
+  "name": "8040025606f18432"
+ },
+ {
+  "path": "/device/8040025606f18436/",
+  "kind": "device",
+  "name": "8040025606f18436"
+ },
+ {
+  "path": "/device/8040025646718438/",
+  "kind": "device",
+  "name": "8040025646718438"
+ },
+ {
+  "path": "/device/8040025646f18435/",
+  "kind": "device",
+  "name": "8040025646f18435"
+ },
+ {
+  "path": "/device/8040425126c18423/",
+  "kind": "device",
+  "name": "8040425126c18423"
+ },
+ {
+  "path": "/device/8040425646718437/",
+  "kind": "device",
+  "name": "8040425646718437"
+ },
+ {
+  "path": "/device/8042025606718436/",
+  "kind": "device",
+  "name": "8042025606718436"
+ },
+ {
+  "path": "/device/8042025606f18432/",
+  "kind": "device",
+  "name": "8042025606f18432"
+ },
+ {
+  "path": "/device/8042025646718438/",
+  "kind": "device",
+  "name": "8042025646718438"
+ },
+ {
+  "path": "/device/804e025646f18435/",
+  "kind": "device",
+  "name": "804E025646f18435"
+ },
+ {
+  "path": "/device/8310425126c18423/",
+  "kind": "device",
+  "name": "8310425126c18423"
+ },
+ {
+  "path": "/device/dahua-2/",
+  "kind": "device",
+  "name": "Dahua"
+ },
+ {
+  "path": "/device/dahua/",
+  "kind": "device",
+  "name": "DAHUA"
+ },
+ {
+  "path": "/device/dh-itc41x-pw4d-pl8i-xxx-multilang-pn-v5.001.10be000.0.r.240130/",
+  "kind": "device",
+  "name": "DH_ITC41X-PW4D(PL8I)-XXX_MultiLang_PN_V5.001.10BE000.0.R.240130"
+ },
+ {
+  "path": "/device/family/v/",
+  "kind": "family",
+  "name": null
+ },
+ {
+  "path": "/device/general-hcvr5x04-s2/",
+  "kind": "device",
+  "name": "General_HCVR5x04-S2"
+ },
+ {
+  "path": "/device/general-hcvr5x04-v2/",
+  "kind": "device",
+  "name": "General_HCVR5x04-V2"
+ },
+ {
+  "path": "/device/general-hcvr5x04-v4/",
+  "kind": "device",
+  "name": "General_HCVR5x04-V4"
+ },
+ {
+  "path": "/device/general-hcvr5x08-s2/",
+  "kind": "device",
+  "name": "General_HCVR5x08-S2"
+ },
+ {
+  "path": "/device/general-hcvr5x08-v2/",
+  "kind": "device",
+  "name": "General_HCVR5x08-V2"
+ },
+ {
+  "path": "/device/general-hcvr5x08-v4/",
+  "kind": "device",
+  "name": "General_HCVR5x08-V4"
+ },
+ {
+  "path": "/device/general-hcvr5x16-s2/",
+  "kind": "device",
+  "name": "General_HCVR5x16-S2"
+ },
+ {
+  "path": "/device/general-hcvr5x16-v2/",
+  "kind": "device",
+  "name": "General_HCVR5x16-V2"
+ },
+ {
+  "path": "/device/general-hcvr5x16-v4/",
+  "kind": "device",
+  "name": "General_HCVR5x16-V4"
+ },
+ {
+  "path": "/device/general-hcvr7x08-4m/",
+  "kind": "device",
+  "name": "General_HCVR7x08-4M"
+ },
+ {
+  "path": "/device/general-hcvr7x16-4m/",
+  "kind": "device",
+  "name": "General_HCVR7x16-4M"
+ },
+ {
+  "path": "/device/general-hcvr7x16-v4/",
+  "kind": "device",
+  "name": "General_HCVR7x16-V4"
+ },
+ {
+  "path": "/device/general-mcvr62xx/",
+  "kind": "device",
+  "name": "General_MCVR62XX"
+ },
+ {
+  "path": "/device/general-n6/",
+  "kind": "device",
+  "name": "General_N6"
+ },
+ {
+  "path": "/device/general-n7/",
+  "kind": "device",
+  "name": "General_N7"
+ },
+ {
+  "path": "/device/general-xvr4x04-x1/",
+  "kind": "device",
+  "name": "General_XVR4x04-X1"
+ },
+ {
+  "path": "/device/general-xvr5x04-i2/",
+  "kind": "device",
+  "name": "General_XVR5x04-I2"
+ },
+ {
+  "path": "/device/general-xvr5x04-i3-b/",
+  "kind": "device",
+  "name": "General_XVR5x04-I3-B"
+ },
+ {
+  "path": "/device/general-xvr5x04-x1/",
+  "kind": "device",
+  "name": "General_XVR5x04-X1"
+ },
+ {
+  "path": "/device/general-xvr5x04/",
+  "kind": "device",
+  "name": "General_XVR5x04"
+ },
+ {
+  "path": "/device/general-xvr5x08-i2/",
+  "kind": "device",
+  "name": "General_XVR5x08-I2"
+ },
+ {
+  "path": "/device/general-xvr5x08-i3-4kl/",
+  "kind": "device",
+  "name": "General_XVR5x08-I3-4KL"
+ },
+ {
+  "path": "/device/general-xvr5x08-i3-b/",
+  "kind": "device",
+  "name": "General_XVR5x08-I3-B"
+ },
+ {
+  "path": "/device/general-xvr5x08-x/",
+  "kind": "device",
+  "name": "General_XVR5x08-X"
+ },
+ {
+  "path": "/device/general-xvr5x08/",
+  "kind": "device",
+  "name": "General_XVR5x08"
+ },
+ {
+  "path": "/device/general-xvr5x16-i3/",
+  "kind": "device",
+  "name": "General_XVR5x16-I3"
+ },
+ {
+  "path": "/device/general-xvr5x16/",
+  "kind": "device",
+  "name": "General_XVR5x16"
+ },
+ {
+  "path": "/device/general-xvr7x08-i2/",
+  "kind": "device",
+  "name": "General_XVR7x08-I2"
+ },
+ {
+  "path": "/device/general-xvr7x08-x/",
+  "kind": "device",
+  "name": "General_XVR7x08-X"
+ },
+ {
+  "path": "/device/general-xvr7x16-i2/",
+  "kind": "device",
+  "name": "General_XVR7x16-I2"
+ },
+ {
+  "path": "/device/general-xvr7x16-x/",
+  "kind": "device",
+  "name": "General_XVR7x16-X"
+ },
+ {
+  "path": "/device/general-xvr7x16/",
+  "kind": "device",
+  "name": "General_XVR7x16"
+ },
+ {
+  "path": "/device/general-xvr7x32-i2/",
+  "kind": "device",
+  "name": "General_XVR7x32-I2"
+ },
+ {
+  "path": "/device/general-xvr8x16-4kl-i/",
+  "kind": "device",
+  "name": "General_XVR8x16-4KL-I"
+ },
+ {
+  "path": "/device/general/",
+  "kind": "device",
+  "name": "General"
+ },
+ {
+  "path": "/device/v2.626.0000000.4.r.220718/",
+  "kind": "device",
+  "name": "V2.626.0000000.4.R.220718"
+ },
+ {
+  "path": "/device/v2.626.00ac002.0.r.230911/",
+  "kind": "device",
+  "name": "V2.626.00AC002.0.R.230911"
+ },
+ {
+  "path": "/device/v2.626.00ac003.0.r.241216/",
+  "kind": "device",
+  "name": "V2.626.00AC003.0.R.241216"
+ },
+ {
+  "path": "/device/v2.626.00ac004.0.r.250326/",
+  "kind": "device",
+  "name": "V2.626.00AC004.0.R.250326"
+ },
+ {
+  "path": "/device/v2.626.00ac006.0.r.250325/",
+  "kind": "device",
+  "name": "V2.626.00AC006.0.R.250325"
+ },
+ {
+  "path": "/device/v2.626.18lk003.0.r.230613/",
+  "kind": "device",
+  "name": "V2.626.18LK003.0.R.230613"
+ },
+ {
+  "path": "/model/nvr4xx/",
+  "kind": "model",
+  "name": "NVR4XX"
+ },
+ {
+  "path": "/model/nvr5xx/",
+  "kind": "model",
+  "name": "NVR5XX"
+ },
+ {
+  "path": "/model/nvr6xx/",
+  "kind": "model",
+  "name": "NVR6XX"
+ }
+]

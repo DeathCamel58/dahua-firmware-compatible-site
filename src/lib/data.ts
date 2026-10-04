@@ -3,11 +3,14 @@ import path from "node:path";
 import brandsJson from "@/data/brands.json";
 import { parseFirmwareName } from "./parseFirmware";
 import {
+  attachDetails,
   displayName,
   hostLabel,
   readEntries,
   type AnalysisStatus,
+  type FirmwarePackage,
   type Hardware,
+  type HardwareSource,
   type ListingKind,
   type Platform,
   type RawEntry,
@@ -63,6 +66,8 @@ export interface Listing {
   /** Archive listings: the original URL and when the Wayback Machine captured it. */
   originalUrl: string | null;
   archivedAt: string | null;
+  /** Earlier addresses this page offered the file at, oldest first (for "previously at" links). */
+  urlHistory: { url: string; firstSeen: string | null; lastSeen: string | null }[];
   /** Set when this listing belongs to an identical copy published under another file name. */
   aliasFilename: string | null;
 }
@@ -81,6 +86,8 @@ export interface Firmware {
   displayName: string;
   /** Short, human-friendly page title, e.g. "IPC-HX5X3X-Rhea firmware V2.800.0000018.0 (Jul 7, 2021)". */
   title: string;
+  /** The file name, shortened for descriptions when it's very long; unique across all firmware. */
+  shortName: string;
   /** Model/platform part of the filename, e.g. "IPC-HX5X3X-Rhea". */
   model: string | null;
   version: string | null;
@@ -100,6 +107,16 @@ export interface Firmware {
   analysis: AnalysisStatus;
   analysisError: string | null;
   hardware: Hardware;
+  /** Where the hardware IDs were read from (extractor v5+; empty for older results). */
+  hardwareSources: HardwareSource[];
+  /** Container format: zip | dh | dhsp | bundle | other. */
+  packageFormat: string | null;
+  /** What each firmware image says about itself: SoC, kernel, partitions, security… (v5+). */
+  packages: FirmwarePackage[];
+  /** Chips this firmware is built for (named SoCs across its packages). */
+  socs: { name: string; vendor: string | null; slug: string }[];
+  /** Highest security baseline across its packages, e.g. "V2.4". */
+  securityBaseline: string | null;
   /** Linkable hardware: hardware.models + hardware.boards (empty unless analysis found IDs). */
   devices: string[];
   /** Retail model names, across all vendors. */
@@ -110,6 +127,7 @@ export interface Firmware {
   size: number | null;
   md5: string | null;
   sha256: string | null;
+  vendorMd5Mismatch: boolean;
   archiveUrl: string | null;
   archiveItem: string | null;
   /** Best link to offer: the Internet Archive item, else a working vendor link, then a mirror, then a Wayback capture. */
@@ -150,6 +168,14 @@ export interface Family {
   devices: string[];
 }
 
+export interface Soc {
+  name: string;
+  vendor: string | null;
+  slug: string;
+  /** Firmware filenames, newest first. */
+  firmwares: string[];
+}
+
 export interface Vendor {
   name: string;
   slug: string;
@@ -166,6 +192,8 @@ export interface SiteData {
   models: Map<string, RetailModel>;
   families: Map<string, Family>;
   vendors: Map<string, Vendor>;
+  /** SoC name -> chip page data. */
+  socs: Map<string, Soc>;
   /** Alias filename -> main firmware filename. */
   aliases: Map<string, string>;
   /** Alias filename -> the slug its redirect page lives at. */
@@ -244,6 +272,17 @@ function compareFirmware(a: Firmware, b: Firmware): number {
 }
 
 const unique = <T>(values: Iterable<T>) => [...new Set(values)];
+
+/** Compare security baselines like "V2.4" and "V2.10" numerically. */
+export function compareBaseline(a: string, b: string): number {
+  const parts = (v: string) => v.replace(/^V/i, "").split(".").map((n) => parseInt(n, 10) || 0);
+  const [x, y] = [parts(a), parts(b)];
+  for (let i = 0; i < Math.max(x.length, y.length); i++) if ((x[i] ?? 0) !== (y[i] ?? 0)) return (x[i] ?? 0) - (y[i] ?? 0);
+  return 0;
+}
+
+const highestBaseline = (values: (string | null)[]) =>
+  values.filter((v): v is string => !!v).sort(compareBaseline).at(-1) ?? null;
 
 /** Latest of some YYYY-MM-DD dates (nulls ignored). */
 export const maxDate = (dates: (string | null | undefined)[]) =>
@@ -345,6 +384,7 @@ function toListing(raw: RawListing, sourceLastRun: Map<string, string>, aliasFil
     kind: raw.kind,
     originalUrl: raw.original_url,
     archivedAt: raw.archived_at,
+    urlHistory: raw.url_history.map((h) => ({ url: h.url, firstSeen: h.first_seen, lastSeen: h.last_seen })),
     aliasFilename,
   };
 }
@@ -352,7 +392,12 @@ function toListing(raw: RawListing, sourceLastRun: Map<string, string>, aliasFil
 /** Order to offer links in: the vendor's own page, then mirrors, then Wayback captures. */
 const KIND_RANK: Record<ListingKind, number> = { vendor: 0, mirror: 1, archive: 2 };
 
-function pickDownload(archiveUrl: string | null, listings: Listing[], fallbackUrl: string | null): Download | null {
+function pickDownload(
+  archiveUrl: string | null,
+  listings: Listing[],
+  fallbackUrl: string | null,
+  waybackCopy: string | null,
+): Download | null {
   if (archiveUrl) return { url: archiveUrl, label: "Internet Archive", kind: "archive" };
   // Links checked as working first, then by kind; links known to be dead are never offered.
   const best = listings
@@ -370,15 +415,56 @@ function pickDownload(archiveUrl: string | null, listings: Listing[], fallbackUr
   if (fallbackUrl && !listings.some((l) => l.url === fallbackUrl && l.urlStatus === "dead")) {
     return { url: fallbackUrl, label: hostLabel(fallbackUrl), kind: "vendor" };
   }
+  // The Wayback capture the pipeline itself had to download from, when every listed link is dead.
+  if (waybackCopy) return { url: waybackCopy, label: "Wayback Machine", kind: "wayback" };
   return null;
 }
 
 // ---------------------------------------------------------------------------------------------
 // Build
 
+/**
+ * Some vendors (RVI, DH Vision) use 100-200 character file names. For descriptions, keep the start
+ * (product) and end (version, date) of long names; where that would make two names identical, add
+ * back the words that differ (e.g. "spiflash" vs "norflash").
+ */
+function assignShortNames(list: Firmware[], max = 95) {
+  const shorten = (name: string) => (name.length <= max ? name : `${name.slice(0, 42)}…${name.slice(-24)}`);
+  const groups = new Map<string, Firmware[]>();
+  for (const fw of list) {
+    fw.shortName = shorten(fw.displayName);
+    if (!groups.has(fw.shortName)) groups.set(fw.shortName, []);
+    groups.get(fw.shortName)!.push(fw);
+  }
+  for (const members of groups.values()) {
+    if (members.length < 2) continue;
+    const words = (fw: Firmware) => fw.displayName.split(/[_\-\s.]+/);
+    const sets = members.map((fw) => new Set(words(fw)));
+    for (const fw of members) {
+      const distinct = words(fw).filter((w) => !sets.every((set) => set.has(w)));
+      fw.shortName = `${fw.displayName.slice(0, 42)}… ${distinct.join(" ")} …${fw.displayName.slice(-24)}`;
+    }
+  }
+}
+
 async function buildData(): Promise<SiteData> {
   const [cameras, compatible] = await Promise.all([loadJson("cameras.json"), loadJson("firmware_compatible.json")]);
   const entries = readEntries(cameras, compatible);
+
+  // Split format: technical details live in data/firmware/… and data/layouts/… next to the two JSONs.
+  // They're read from DATA_DIR (the deploy workflow checks the data repo out); without it the site
+  // still builds, just without technical details.
+  if (entries.some((e) => e.analysis.detail)) {
+    if (process.env.DATA_DIR) {
+      const dir = process.env.DATA_DIR;
+      const { loaded, missing } = await attachDetails(entries, (rel) =>
+        readFile(path.join(dir, rel), "utf8").then(JSON.parse, () => null),
+      );
+      if (missing) console.warn(`[data] ${missing} firmware detail files were missing; ${loaded} loaded`);
+    } else {
+      console.warn("[data] DATA_DIR isn't set, so firmware detail files (technical details) are skipped");
+    }
+  }
   const byName = new Map(entries.map((e) => [e.filename, e]));
 
   const latestRun =
@@ -426,6 +512,7 @@ async function buildData(): Promise<SiteData> {
       filename: e.filename,
       displayName: displayName(e.filename),
       title: "", // filled in below once every firmware is known
+      shortName: "", // likewise
       model: parsed.model,
       version: e.firmware_version ?? (parsed.version ? `V${parsed.version}` : null),
       date: vendorDate ?? parsed.buildDate,
@@ -443,6 +530,11 @@ async function buildData(): Promise<SiteData> {
       analysis: e.analysis.status,
       analysisError: e.analysis.error,
       hardware: e.analysis.hardware,
+      hardwareSources: e.analysis.hardwareSources,
+      packageFormat: e.analysis.packageFormat,
+      packages: e.analysis.packages,
+      socs: [], // filled in below once every chip is known
+      securityBaseline: highestBaseline(e.analysis.packages.map((p) => p.security?.baseline ?? null)),
       devices,
       models: unique([...e.camera_name, ...listings.flatMap((l) => l.models)]).sort(),
       series: unique([...e.series, ...listings.flatMap((l) => l.series)]),
@@ -451,9 +543,10 @@ async function buildData(): Promise<SiteData> {
       size: e.size,
       md5: e.md5,
       sha256: e.sha256,
+      vendorMd5Mismatch: e.vendor_md5_mismatch,
       archiveUrl: e.archive_url,
       archiveItem: e.archive_item,
-      download: e.downloadable ? pickDownload(e.archive_url, listings, e.url) : null,
+      download: e.downloadable ? pickDownload(e.archive_url, listings, e.url, e.downloaded_from) : null,
       firstSeen: listings.map((l) => l.firstSeen).filter((d): d is string => !!d).sort()[0] ?? null,
       lastmod: maxDate([vendorDate ?? parsed.buildDate, e.analysis.processedAt, ...listings.map((l) => l.firstSeen)]),
     });
@@ -461,6 +554,7 @@ async function buildData(): Promise<SiteData> {
 
   const firmwareList = [...firmwares.values()].sort(compareFirmware);
   assignTitles(firmwareList);
+  assignShortNames(firmwareList);
   // Say up front, in search results too, when a file isn't usable on Dahua hardware.
   for (const fw of firmwareList) {
     if (fw.platform === "hikvision") fw.title += " (Hikvision)";
@@ -483,7 +577,20 @@ async function buildData(): Promise<SiteData> {
     if (values.at(-1) !== value) values.push(value);
   };
 
+  const socFirmwares = new Map<string, string[]>();
+  const socVendor = new Map<string, string | null>();
+  const entryByName = byName;
   for (const fw of firmwareList) {
+    // Chips come from the detail packages when loaded, else from the index's `socs` summary.
+    const chipList = fw.packages.length
+      ? fw.packages.map((p) => ({ name: p.soc?.name ?? null, vendor: p.soc?.vendor ?? null }))
+      : (byName.get(fw.filename)?.analysis.socs ?? []);
+    for (const chip of chipList) {
+      const name = chip.name;
+      if (!name) continue;
+      push(socFirmwares, name, fw.filename);
+      if (!socVendor.get(name)) socVendor.set(name, chip.vendor ?? null);
+    }
     for (const device of fw.devices) push(deviceFirmwares, device, fw.filename);
     for (const board of fw.hardware.boards) deviceKind.set(board, "board");
     if (fw.analysis === "ok" && fw.platform !== "hikvision") for (const id of fw.hardware.hwids) push(hwids, id, fw.filename);
@@ -517,7 +624,8 @@ async function buildData(): Promise<SiteData> {
     for (const member of members) familyOf.set(member, name);
   }
 
-  const deviceSlugs = assignSlugs(deviceFirmwares.keys());
+  // "family" is taken by /device/family/…
+  const deviceSlugs = assignSlugs(deviceFirmwares.keys(), ["family"]);
   const devices = new Map<string, Device>();
   for (const [name, fws] of [...deviceFirmwares].sort(([a], [b]) => a.localeCompare(b))) {
     const family = families.get(familyOf.get(name)!)!;
@@ -531,7 +639,7 @@ async function buildData(): Promise<SiteData> {
     });
   }
 
-  const modelSlugs = assignSlugs(modelFirmwares.keys());
+  const modelSlugs = assignSlugs(modelFirmwares.keys(), ["brand"]);
   const models = new Map<string, RetailModel>();
   for (const [name, fws] of [...modelFirmwares].sort(([a], [b]) => a.localeCompare(b))) {
     const publishers = [...(modelVendors.get(name) ?? [])].sort();
@@ -550,9 +658,24 @@ async function buildData(): Promise<SiteData> {
     });
   }
 
+  const socSlugs = assignSlugs(socFirmwares.keys());
+  const socs = new Map<string, Soc>();
+  for (const [name, fws] of [...socFirmwares].sort(([a], [b]) => a.localeCompare(b))) {
+    socs.set(name, { name, vendor: socVendor.get(name) ?? null, slug: socSlugs.get(name)!, firmwares: fws });
+  }
+  for (const fw of firmwareList) {
+    const names = fw.packages.length
+      ? fw.packages.map((p) => p.soc?.name)
+      : (entryByName.get(fw.filename)?.analysis.socs ?? []).map((s) => s.name);
+    fw.socs = unique(names.filter((n): n is string => !!n)).map((name) => {
+      const soc = socs.get(name)!;
+      return { name, vendor: soc.vendor, slug: soc.slug };
+    });
+  }
+
   const aliasSlugs = new Map([...aliases.keys()].map((alias) => [alias, firmwareSlugs.get(alias)!]));
 
-  return { firmwares, devices, models, families, vendors, aliases, aliasSlugs, hwids, firmwareList, latestRun };
+  return { firmwares, devices, models, families, vendors, socs, aliases, aliasSlugs, hwids, firmwareList, latestRun };
 }
 
 let cached: Promise<SiteData> | undefined;
@@ -639,7 +762,11 @@ export const paths = {
   device: (d: Pick<Device, "slug">) => `/device/${d.slug}/`,
   family: (f: Pick<Family, "slug">) => `/device/family/${f.slug}/`,
   model: (m: Pick<RetailModel, "slug">) => `/model/${m.slug}/`,
+  modelBrand: (v: Pick<Vendor, "slug">) => `/model/brand/${v.slug}/`,
+  modelSeries: (v: Pick<Vendor, "slug">, g: Pick<NameGroup, "slug">) => `/model/brand/${v.slug}/${g.slug}/`,
+  vendorFirmware: (v: Pick<Vendor, "slug">) => `/vendor/${v.slug}/firmware/`,
   vendor: (v: Pick<Vendor, "slug">) => `/vendor/${v.slug}/`,
+  soc: (s: Pick<Soc, "slug">) => `/soc/${s.slug}/`,
 };
 
 export function formatDate(iso: string | null): string | null {
@@ -702,3 +829,37 @@ export function retailNames(firmwares: Firmware[], only?: (model: string) => boo
 
 /** Latest content date across some firmwares. */
 export const lastmodOf = (firmwares: Firmware[]) => maxDate(firmwares.map((fw) => fw.lastmod));
+
+export interface NameGroup {
+  key: string;
+  name: string;
+  slug: string;
+  items: string[];
+}
+
+/**
+ * Group model names into series by their prefix (IPC-HFW, NVR, SD…), folding series with fewer than
+ * `minSize` names into "Other". Biggest first, "Other" last; names sorted within each group.
+ */
+export function groupBySeries(names: string[], minSize = 3): NameGroup[] {
+  const groups = new Map<string, string[]>();
+  for (const name of names) {
+    const key = deviceFamily(name);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(name);
+  }
+  for (const [key, items] of [...groups]) {
+    if (key !== "OTHER" && items.length < minSize) {
+      groups.delete(key);
+      if (!groups.has("OTHER")) groups.set("OTHER", []);
+      groups.get("OTHER")!.push(...items);
+    }
+  }
+  const slugs = assignSlugs(groups.keys());
+  return [...groups]
+    .map(([key, items]) => ({ key, name: key === "OTHER" ? "Other" : key, slug: slugs.get(key)!, items: items.sort() }))
+    .sort((a, b) => (a.key === "OTHER" ? 1 : b.key === "OTHER" ? -1 : b.items.length - a.items.length || a.name.localeCompare(b.name)));
+}
+
+/** Vendors with more models than this get one page per series instead of a single list. */
+export const MODELS_PER_PAGE_LIMIT = 300;

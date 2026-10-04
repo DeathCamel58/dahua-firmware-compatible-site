@@ -24,9 +24,25 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # The site reads its data from here (see src/lib/data.ts): the two JSON indexes plus the
+      # per-firmware detail files and partition layouts under data/.
+      DATA_DIR: ${{ github.workspace }}/.pipeline-data
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+      - name: Checkout firmware data
+        uses: actions/checkout@v7
+        with:
+          repository: DeathCamel58/amcrest-compatible-finder
+          ref: master
+          path: .pipeline-data
+          # Only the data, not the pipeline's code or docs.
+          sparse-checkout: |
+            /cameras.json
+            /firmware_compatible.json
+            /data/
+          sparse-checkout-cone-mode: false
       - name: Build with Astro
         uses: withastro/action@v6
         with:

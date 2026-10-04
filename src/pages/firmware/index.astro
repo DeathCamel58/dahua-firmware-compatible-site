@@ -16,8 +16,8 @@ const yearLabel = (year: string) => (year === UNDATED ? "Undated" : year);
 ---
 
 <BaseLayout
-  title="All Dahua, Amcrest & Lorex firmware files"
-  description={`Browse ${plural(data.firmwareList.length, "firmware file")} for Dahua-made cameras, NVRs and DVRs (including Amcrest and Lorex), by year, with download links and compatible devices.`}
+  title="All firmware for Dahua-made devices"
+  description={`Browse ${plural(data.firmwareList.length, "firmware file")} for Dahua-made cameras, NVRs and DVRs from ${data.vendors.size} brands, by year, with download links and compatible devices.`}
   lastmod={lastmodOf(data.firmwareList)}
   breadcrumbs={[{ name: "Home", href: "/" }, { name: "Firmware" }]}
 >

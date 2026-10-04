@@ -17,6 +17,7 @@ const buildDate = new Date().toISOString().slice(0, 10);
       <p class="font-semibold text-fg">Browse</p>
       <ul class="mt-2 space-y-1">
         {nav.map((item) => <li><a href={item.href}>{item.name}</a></li>)}
+        <li><a href="/soc/">Chips (SoC)</a></li>
       </ul>
     </nav>
     <div>

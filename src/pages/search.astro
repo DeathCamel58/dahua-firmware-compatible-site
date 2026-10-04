@@ -24,7 +24,7 @@ import Search from "@/components/Search.astro";
 </BaseLayout>
 
 <script>
-  import { TYPE_DEVICE, TYPE_FIRMWARE, TYPE_MODEL, loadIndex, search, type EntryType } from "@/scripts/search-core";
+  import { TYPE_DEVICE, TYPE_FIRMWARE, TYPE_MODEL, TYPE_SOC, loadIndex, search, type EntryType } from "@/scripts/search-core";
   import { renderResultRow } from "@/scripts/search-box";
 
   const container = document.getElementById("search-results")!;
@@ -32,6 +32,7 @@ import Search from "@/components/Search.astro";
   const groups: { type: EntryType; title: string }[] = [
     { type: TYPE_DEVICE, title: "Devices" },
     { type: TYPE_MODEL, title: "Retail models" },
+    { type: TYPE_SOC, title: "Chips" },
     { type: TYPE_FIRMWARE, title: "Firmware" },
   ];
 

@@ -1,0 +1,50 @@
+---
+import { pageUrl } from "@/lib/paginate";
+
+interface Props {
+  page: number;
+  pages: number;
+  /** Base URL of page 1 (ending in "/"); later pages are `${base}2/` etc. */
+  base: string;
+  /** Labels for the previous/next links. */
+  prev?: string;
+  next?: string;
+}
+
+const { page, pages, base, prev = "← Newer", next = "Older →" } = Astro.props;
+// First, last, and a window around the current page.
+const numbers = [...new Set([1, page - 2, page - 1, page, page + 1, page + 2, pages])]
+  .filter((n) => n >= 1 && n <= pages)
+  .sort((a, b) => a - b);
+---
+
+{
+  pages > 1 && (
+    <nav aria-label="Pages" class="mt-6 flex flex-wrap items-center justify-center gap-1 text-sm">
+      {page > 1 && (
+        <a href={pageUrl(base, page - 1)} class="btn-ghost px-3 py-1.5" rel="prev">
+          {prev}
+        </a>
+      )}
+      {numbers.map((n, i) => (
+        <>
+          {i > 0 && n - numbers[i - 1] > 1 && <span class="px-1 text-muted">…</span>}
+          {n === page ? (
+            <span aria-current="page" class="rounded-lg bg-accent px-3 py-1.5 font-semibold text-accent-fg">
+              {n}
+            </span>
+          ) : (
+            <a href={pageUrl(base, n)} class="rounded-lg px-3 py-1.5 no-underline hover:bg-surface-2">
+              {n}
+            </a>
+          )}
+        </>
+      ))}
+      {page < pages && (
+        <a href={pageUrl(base, page + 1)} class="btn-ghost px-3 py-1.5" rel="next">
+          {next}
+        </a>
+      )}
+    </nav>
+  )
+}

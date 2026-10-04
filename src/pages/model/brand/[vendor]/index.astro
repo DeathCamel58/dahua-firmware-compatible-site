@@ -1,0 +1,89 @@
+---
+import type { GetStaticPaths } from "astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import Chips from "@/components/Chips.astro";
+import PageHeader from "@/components/PageHeader.astro";
+import VendorLogo from "@/components/VendorLogo.astro";
+import { MODELS_PER_PAGE_LIMIT, getData, groupBySeries, lastmodOf, paths } from "@/lib/data";
+import { composeDescription, plural } from "@/lib/site";
+
+export const getStaticPaths = (async () => {
+  const data = await getData();
+  return [...data.vendors.values()]
+    .filter((v) => v.models.length > 0)
+    .map((v) => ({ params: { vendor: v.slug }, props: { name: v.name } }));
+}) satisfies GetStaticPaths;
+
+const data = await getData();
+const vendor = data.vendors.get(Astro.props.name)!;
+const series = groupBySeries(vendor.models);
+// Small catalogues fit on one page; big ones (Dahua has thousands) get a page per series.
+const split = vendor.models.length > MODELS_PER_PAGE_LIMIT;
+const models = (names: string[]) =>
+  names.map((n) => data.models.get(n)).filter((m) => !!m).map((m) => ({ name: m.name, href: paths.model(m) }));
+const firmwares = vendor.firmwares.map((f) => data.firmwares.get(f)!);
+---
+
+<BaseLayout
+  title={`${vendor.name} models: firmware by model`}
+  description={composeDescription([
+    `Firmware for ${plural(vendor.models.length, `${vendor.name} model`)}`,
+    { lead: "Series include", items: series.filter((s) => s.key !== "OTHER").map((s) => s.name) },
+    "Pick a model to see its firmware and the Dahua hardware it runs on",
+  ])}
+  lastmod={lastmodOf(firmwares)}
+  breadcrumbs={[{ name: "Home", href: "/" }, { name: "Retail models", href: "/model/" }, { name: vendor.name }]}
+>
+  <div class="mb-4">
+    <VendorLogo brand={vendor.brand} name={vendor.name} height={36} />
+  </div>
+  <PageHeader eyebrow="Retail models" title={`${vendor.name} models`}>
+    <p class="mt-3 max-w-3xl text-muted">
+      {plural(vendor.models.length, "model name")} that {vendor.name} lists on its download pages, grouped by series.
+      See also <a href={paths.vendor(vendor)}>all {vendor.name} firmware</a>.
+    </p>
+  </PageHeader>
+
+  {
+    split ? (
+      <ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {series.map((s) => (
+          <li>
+            <a
+              href={paths.modelSeries(vendor, s)}
+              class="card flex h-full flex-col px-4 py-3 text-fg no-underline hover:border-accent hover:no-underline"
+            >
+              <span class="flex items-baseline justify-between gap-2">
+                <span class="font-mono font-semibold">{s.name}</span>
+                <span class="text-xs text-muted">{plural(s.items.length, "model")}</span>
+              </span>
+              <span class="mt-1 truncate font-mono text-xs text-muted">{s.items.slice(0, 4).join(", ")}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <>
+        {series.length > 3 && (
+          <nav aria-label="Jump to series" class="mb-6 flex flex-wrap gap-1 text-sm">
+            {series.map((s) => (
+              <a href={`#series-${s.slug}`} class="rounded px-2 py-1 font-mono hover:bg-surface-2">
+                {s.name}
+              </a>
+            ))}
+          </nav>
+        )}
+        <div class="space-y-8">
+          {series.map((s) => (
+            <section id={`series-${s.slug}`} aria-labelledby={`series-${s.slug}-h`} class="scroll-mt-24">
+              <h2 id={`series-${s.slug}-h`} class="section-title font-mono">
+                {s.name} <span class="text-sm font-normal text-muted">({s.items.length})</span>
+              </h2>
+              <Chips items={models(s.items)} />
+            </section>
+          ))}
+        </div>
+      </>
+    )
+  }
+</BaseLayout>

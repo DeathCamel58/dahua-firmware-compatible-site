@@ -1,0 +1,49 @@
+---
+/**
+ * Redirects for URLs the site used to serve that no longer have a page of their own (recorded in
+ * src/data/legacy-urls.json from the live site's sitemap and old-URL stubs). Each points at the most
+ * useful current page; nothing that was ever linked to should 404.
+ */
+import type { GetStaticPaths } from "astro";
+import Redirect from "@/components/Redirect.astro";
+import legacy from "@/data/legacy-urls.json";
+import { getData, paths } from "@/lib/data";
+
+export const getStaticPaths = (async () => {
+  const data = await getData();
+  const devicesByLower = new Map([...data.devices.values()].map((d) => [d.name.toLowerCase(), d]));
+  const modelsByLower = new Map([...data.models.values()].map((m) => [m.name.toLowerCase(), m]));
+  const firmwareByName = (name: string) => {
+    const main = data.aliases.get(name) ?? name;
+    return data.firmwares.get(main);
+  };
+
+  const target = (kind: string, name: string | null): string => {
+    if (kind === "device" && name) {
+      // "General_HCVR5x04-S2" is now folded into "HCVR5x04-S2".
+      const device = devicesByLower.get(name.toLowerCase()) ?? devicesByLower.get(name.replace(/^General_/i, "").toLowerCase());
+      if (device) return paths.device(device);
+      // A raw hex hardware ID: send people to the newest firmware that lists it.
+      const firmware = data.hwids.get(name.toLowerCase())?.[0];
+      if (firmware) return paths.firmware(data.firmwares.get(firmware)!);
+      return "/device/";
+    }
+    if (kind === "model" && name) {
+      const model = modelsByLower.get(name.toLowerCase());
+      return model ? paths.model(model) : "/model/";
+    }
+    if (kind === "firmware" && name) {
+      const fw = firmwareByName(name);
+      return fw ? paths.firmware(fw) : "/firmware/";
+    }
+    return kind === "family" ? "/device/" : "/";
+  };
+
+  return (legacy as { path: string; kind: string; name: string | null }[]).map((entry) => ({
+    params: { legacy: entry.path.replace(/^\/|\/$/g, "") },
+    props: { to: target(entry.kind, entry.name) },
+  }));
+}) satisfies GetStaticPaths;
+---
+
+<Redirect to={Astro.props.to} />

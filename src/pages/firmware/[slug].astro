@@ -6,6 +6,7 @@ import FirmwareList from "@/components/FirmwareList.astro";
 import PageHeader from "@/components/PageHeader.astro";
 import Redirect from "@/components/Redirect.astro";
 import Stats from "@/components/Stats.astro";
+import TechnicalDetails from "@/components/TechnicalDetails.astro";
 import VendorLogo from "@/components/VendorLogo.astro";
 import Warning from "@/components/Warning.astro";
 import {
@@ -69,8 +70,7 @@ const compatibility =
 const soldAs = retailNames([fw]);
 // Some vendors (RVI) put every model name into the filename; past ~95 characters it would eat the
 // whole description, so shorten it there and let "Sold as" carry the model names.
-const leadName =
-  fw.displayName.length <= 95 ? fw.displayName : fw.title.length <= 80 ? fw.title : `${fw.displayName.slice(0, 60)}…`;
+const leadName = fw.displayName.length <= 95 || fw.title.length > 80 ? fw.shortName : fw.title;
 const description = composeDescription([
   `${leadName}: ${built}`,
   fw.platform === "hikvision"
@@ -83,6 +83,7 @@ const description = composeDescription([
   { lead: "Sold as", items: soldAs },
   devices.length > 0 && !notDahua ? { lead: `Works with ${plural(devices.length, "device")} incl.`, items: highlights } : null,
   !devices.length && !notDahua && fw.downloadable ? compatibility : null,
+  fw.socs.length ? `Built for the ${fw.socs.map((s) => `${s.vendor ? `${s.vendor} ` : ""}${s.name}`).join(" and ")}` : null,
   fw.download?.kind === "archive" ? "Archived copy available" : null,
   fw.version && !fw.title.includes(fw.version) ? `Version ${fw.version}` : null,
   fw.download && !fw.truncated ? "Download link, checksums and compatible hardware" : null,
@@ -133,6 +134,13 @@ const listingTags = (l: Listing) =>
     l.delisted ? "No longer listed" : null,
     l.inferred ? "From earlier data" : null,
   ].filter((t): t is string => !!t);
+const SOURCE_TEXT: Record<string, string> = {
+  hwid: "the device's own hardware check list",
+  check_img: "the device's own hardware check list",
+  install: "the installer's device list (board families)",
+  install_lua: "the installer script's board checks",
+  uboot: "the bootloader's board name",
+};
 const checksums = [
   ["MD5", fw.md5],
   ["SHA-256", fw.sha256],
@@ -241,6 +249,12 @@ const checksums = [
                 </dd>
               </div>
             ))}
+            {fw.vendorMd5Mismatch && (
+              <p class="text-xs text-muted">
+                The vendor published a different MD5 for this file. It was kept because two separate downloads were
+                identical, and it passed the integrity check; vendors occasionally publish wrong checksums.
+              </p>
+            )}
             {fw.changelog && (
               <div class="flex flex-col gap-1 sm:flex-row sm:gap-3">
                 <dt class="w-20 shrink-0 text-muted">Changelog</dt>
@@ -256,6 +270,12 @@ const checksums = [
           <Warning>
             Compatibility is detected automatically and may be wrong. Check that your device's <code>updateSerial</code>{" "}
             matches before flashing. A wrong firmware can brick your device.
+            {fw.securityBaseline && (
+              <>
+                {" "}This firmware has security baseline <strong>{fw.securityBaseline}</strong>: after installing it, you
+                may not be able to downgrade (<a href="#tech-heading">details</a>).
+              </>
+            )}
           </Warning>
         </div>
       </section>
@@ -349,6 +369,21 @@ const checksums = [
                       )}
                     </p>
                   )}
+                  {l.urlHistory.length > 0 && (
+                    <details class="text-xs">
+                      <summary class="cursor-pointer text-muted">
+                        Previously at {plural(l.urlHistory.length, "other address", "other addresses")}
+                      </summary>
+                      <ul class="mt-1 space-y-1">
+                        {l.urlHistory.map((h) => (
+                          <li class="break-all">
+                            <a href={h.url} rel="nofollow noopener" class="text-muted">{h.url}</a>
+                            {h.lastSeen && <span class="text-muted"> (last seen {formatDate(h.lastSeen)})</span>}
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  )}
                 </li>
               );
             })}
@@ -370,6 +405,22 @@ const checksums = [
               </>
             ) : (
               <p class="text-muted">Only raw hardware IDs were found (below).</p>
+            )}
+            {fw.hardwareSources.length > 0 && (
+              <details class="mt-4 text-sm">
+                <summary class="cursor-pointer text-muted">Where these IDs come from</summary>
+                <ul class="mt-2 space-y-1">
+                  {fw.hardwareSources.map((s) => (
+                    <li class:list={[!s.counted && "text-muted"]}>
+                      <span class="font-mono text-xs">{s.member ?? s.source}</span>
+                      {s.firmware && <span class="text-xs text-muted"> in {s.firmware}</span>}: {SOURCE_TEXT[s.source] ?? s.source},{" "}
+                      {plural(s.ids.length, "ID")}
+                      {s.vendor && `, vendor ${s.vendor}`}
+                      {!s.counted && " (not counted: a more specific list exists)"}
+                    </li>
+                  ))}
+                </ul>
+              </details>
             )}
             {fw.hardware.hwids.length > 0 && (
               <details class="mt-4 text-sm">
@@ -394,6 +445,8 @@ const checksums = [
           </p>
         )}
       </section>
+
+      <TechnicalDetails fw={fw} data={data} />
 
       {fw.aliases.length > 0 && (
         <section class="mb-8" aria-labelledby="aliases-heading">

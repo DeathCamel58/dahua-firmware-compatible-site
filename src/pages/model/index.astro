@@ -1,63 +1,56 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
-import Chips from "@/components/Chips.astro";
 import PageHeader from "@/components/PageHeader.astro";
+import Search from "@/components/Search.astro";
+import VendorLogo from "@/components/VendorLogo.astro";
 import { getData, lastmodOf, paths } from "@/lib/data";
-import { plural } from "@/lib/site";
+import { composeDescription, plural } from "@/lib/site";
 
 const data = await getData();
-
-// One section per brand that lists the model; a model listed by several brands appears in each.
-const UNKNOWN = "Other sources";
-const groups = new Map<string, { name: string; href: string }[]>();
-for (const model of data.models.values()) {
-  const brands = model.publishers.length > 0 ? model.publishers : [UNKNOWN];
-  for (const brand of new Set(brands)) {
-    if (!groups.has(brand)) groups.set(brand, []);
-    groups.get(brand)!.push({ name: model.name, href: paths.model(model) });
-  }
-}
-// Biggest brands first, unknown last.
-const sorted = [...groups].sort(([a, x], [b, y]) =>
-  a === UNKNOWN ? 1 : b === UNKNOWN ? -1 : y.length - x.length || a.localeCompare(b),
-);
-const anchor = (brand: string) => `brand-${brand.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+// Vendors that list retail models, biggest first. Each links to its own model index.
+const vendors = [...data.vendors.values()]
+  .filter((v) => v.models.length > 0)
+  .sort((a, b) => b.models.length - a.models.length || a.name.localeCompare(b.name));
 ---
 
 <BaseLayout
   title="Firmware by retail model"
-  description={`Find firmware by the model name on the box: ${plural(data.models.size, "retail model")} from ${data.vendors.size} vendors, each linked to its firmware and Dahua device IDs.`}
+  description={composeDescription([
+    `Find firmware by the model name on the box: ${plural(data.models.size, "retail model")} from ${plural(vendors.length, "vendor")}`,
+    { lead: "Including", items: vendors.map((v) => v.name) },
+  ])}
   lastmod={lastmodOf(data.firmwareList)}
   breadcrumbs={[{ name: "Home", href: "/" }, { name: "Retail models" }]}
 >
   <PageHeader title="Retail models">
     <p class="mt-3 max-w-3xl text-muted">
-      These are the model names brands use on the box and on their download pages, grouped by the brand that lists
-      them. If you only know your device's internal ID (its <code>updateSerial</code>), <a href="/device/">browse
-      devices</a> instead.
+      The model names brands print on the box and use on their download pages. Search for yours, or pick the brand
+      that sold it. If you only know your device's internal ID (its <code>updateSerial</code>),{" "}
+      <a href="/device/">browse devices</a> instead.
     </p>
   </PageHeader>
 
-  <nav aria-label="Jump to brand" class="mb-6 flex flex-wrap gap-2 text-sm">
-    {
-      sorted.map(([brand, models]) => (
-        <a href={`#${anchor(brand)}`} class="rounded-md border border-border bg-surface px-3 py-1 no-underline hover:border-accent">
-          {brand} <span class="text-muted">· {models.length}</span>
-        </a>
-      ))
-    }
-  </nav>
-
-  <div class="space-y-10">
-    {
-      sorted.map(([brand, models]) => (
-        <section id={anchor(brand)} aria-labelledby={`${anchor(brand)}-heading`} class="scroll-mt-24">
-          <h2 id={`${anchor(brand)}-heading`} class="section-title">
-            {brand} <span class="text-sm font-normal text-muted">({models.length})</span>
-          </h2>
-          <Chips items={models} />
-        </section>
-      ))
-    }
+  <div class="mb-8 max-w-2xl">
+    <Search id="model-search" />
   </div>
+
+  <h2 class="section-title">Browse by brand</h2>
+  <ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    {
+      vendors.map((v) => (
+        <li>
+          <a
+            href={paths.modelBrand(v)}
+            class="card flex h-full items-center gap-4 p-4 text-fg no-underline hover:border-accent hover:no-underline"
+          >
+            <VendorLogo brand={v.brand} name={v.name} height={28} />
+            <span class="min-w-0">
+              <span class="block font-semibold">{v.name}</span>
+              <span class="block text-xs text-muted">{plural(v.models.length, "model")}</span>
+            </span>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
 </BaseLayout>

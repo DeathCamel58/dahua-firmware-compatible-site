@@ -22,7 +22,8 @@ const families = [...data.families.values()].sort((a, b) => {
   <PageHeader title="Devices by family">
     <p class="mt-3 max-w-3xl text-muted">
       {plural(data.devices.size, "device ID")} found inside firmware files, grouped by model prefix. Not sure of your
-      model? Check your device's <a href="/#how-to"><code>updateSerial</code></a>.
+      model? Check your device's <a href="/#how-to"><code>updateSerial</code></a>. You can also browse{" "}
+      <a href="/soc/">by chip</a>.
     </p>
   </PageHeader>
 

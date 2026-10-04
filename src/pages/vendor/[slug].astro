@@ -6,7 +6,9 @@ import FirmwareList from "@/components/FirmwareList.astro";
 import PageHeader from "@/components/PageHeader.astro";
 import Stats from "@/components/Stats.astro";
 import VendorLogo from "@/components/VendorLogo.astro";
+import { getImage } from "astro:assets";
 import { formatDate, getData, lastmodOf, paths } from "@/lib/data";
+import { logoAsset } from "@/lib/logos";
 import { composeDescription, plural } from "@/lib/site";
 
 export const getStaticPaths = (async () => {
@@ -24,6 +26,10 @@ const others = firmwares.filter((fw) => !current.includes(fw));
 const delisted = firmwares.filter((fw) => ofVendor(fw).every((l) => l.delisted)).length;
 const newest = firmwares.find((fw) => fw.date);
 const models = vendor.models.map((name) => data.models.get(name)!).filter(Boolean);
+// Big vendors (Dahua lists thousands of files and models) would make this page megabytes long, so
+// each section shows the newest files and links to the full, paginated list.
+const SECTION_LIMIT = 50;
+const MODEL_SAMPLE = 40;
 
 const description = composeDescription([
   `${vendor.name} firmware downloads: ${plural(firmwares.length, "file")}${models.length ? ` for ${plural(models.length, "model")}` : ""}`,
@@ -32,13 +38,18 @@ const description = composeDescription([
   "With the Dahua hardware each file supports",
 ]);
 const site = Astro.site!;
+// Structured data needs a real URL: a PNG of the logo, big enough for search engines to use.
+const logoFile = logoAsset(vendor.brand?.logo);
+const logoUrl = logoFile
+  ? new URL((await getImage({ src: logoFile, height: Math.min(logoFile.height, 240), format: logoFile.format === "svg" ? "svg" : "png" })).src, site).href
+  : null;
 const jsonLd = [
   {
     "@context": "https://schema.org",
     "@type": "Organization",
     name: vendor.name,
     ...(vendor.brand?.website ? { url: vendor.brand.website, sameAs: [vendor.brand.website] } : {}),
-    ...(vendor.brand?.logo ? { logo: new URL(vendor.brand.logo, site).href } : {}),
+    ...(logoUrl ? { logo: logoUrl } : {}),
   },
   {
     "@context": "https://schema.org",
@@ -90,7 +101,13 @@ const jsonLd = [
       <section class="mb-8" aria-labelledby="current-heading">
         <h2 id="current-heading" class="section-title">Current firmware</h2>
         <p class="mb-3 text-sm text-muted">Files {vendor.name} lists as the latest version for a product.</p>
-        <FirmwareList firmwares={current} />
+        <FirmwareList firmwares={current.slice(0, SECTION_LIMIT)} />
+        {current.length > SECTION_LIMIT && (
+          <p class="mt-3 text-sm">
+            Showing the {SECTION_LIMIT} newest of {current.length.toLocaleString("en-US")}.{" "}
+            <a href={paths.vendorFirmware(vendor)}>See all {vendor.name} firmware →</a>
+          </p>
+        )}
       </section>
     )
   }
@@ -99,7 +116,13 @@ const jsonLd = [
     others.length > 0 && (
       <section class="mb-8" aria-labelledby="other-heading">
         <h2 id="other-heading" class="section-title">{current.length > 0 ? "Previous and other firmware" : "Firmware"}</h2>
-        <FirmwareList firmwares={others} />
+        <FirmwareList firmwares={others.slice(0, SECTION_LIMIT)} />
+        {others.length > SECTION_LIMIT && (
+          <p class="mt-3 text-sm">
+            Showing the {SECTION_LIMIT} newest of {others.length.toLocaleString("en-US")}.{" "}
+            <a href={paths.vendorFirmware(vendor)}>See all {vendor.name} firmware →</a>
+          </p>
+        )}
       </section>
     )
   }
@@ -107,8 +130,17 @@ const jsonLd = [
   {
     models.length > 0 && (
       <section aria-labelledby="models-heading">
-        <h2 id="models-heading" class="section-title">{vendor.name} models</h2>
-        <Chips items={models.map((m) => ({ name: m.name, href: paths.model(m) }))} />
+        <div class="mb-3 flex items-baseline justify-between gap-4">
+          <h2 id="models-heading" class="section-title mb-0">{vendor.name} models</h2>
+          {models.length > MODEL_SAMPLE && <a href={paths.modelBrand(vendor)} class="text-sm">All {plural(models.length, "model")} →</a>}
+        </div>
+        {models.length > MODEL_SAMPLE && <p class="mb-3 text-sm text-muted">The models with the most firmware:</p>}
+        <Chips
+          items={[...models]
+            .sort((a, b) => b.firmwares.length - a.firmwares.length || a.name.localeCompare(b.name))
+            .slice(0, MODEL_SAMPLE)
+            .map((m) => ({ name: m.name, href: paths.model(m) }))}
+        />
       </section>
     )
   }

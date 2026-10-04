@@ -1,0 +1,77 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import PageHeader from "@/components/PageHeader.astro";
+import { getData, lastmodOf, paths } from "@/lib/data";
+import { composeDescription, plural } from "@/lib/site";
+
+const data = await getData();
+const socs = [...data.socs.values()];
+
+// Group by chip vendor, biggest vendors first; chips by firmware count within each.
+const groups = new Map<string, typeof socs>();
+for (const soc of socs) {
+  const vendor = soc.vendor ?? "Other";
+  if (!groups.has(vendor)) groups.set(vendor, []);
+  groups.get(vendor)!.push(soc);
+}
+const sorted = [...groups]
+  .map(([vendor, list]) => [vendor, list.sort((a, b) => b.firmwares.length - a.firmwares.length || a.name.localeCompare(b.name))] as const)
+  .sort(([a, x], [b, y]) =>
+    a === "Other" ? 1 : b === "Other" ? -1 : y.reduce((n, s) => n + s.firmwares.length, 0) - x.reduce((n, s) => n + s.firmwares.length, 0),
+  );
+const anchor = (vendor: string) => `vendor-${vendor.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+const firmwareCount = new Set(socs.flatMap((s) => s.firmwares)).size;
+---
+
+<BaseLayout
+  title="Firmware by chip (SoC)"
+  description={composeDescription([
+    `Dahua-made firmware grouped by the chip it runs on: ${plural(socs.length, "SoC")} from ${plural(sorted.length, "chip vendor")}`,
+    { lead: "Including", items: sorted.map(([vendor]) => vendor).filter((v) => v !== "Other") },
+  ])}
+  lastmod={lastmodOf(socs.flatMap((s) => s.firmwares).map((f) => data.firmwares.get(f)!))}
+  breadcrumbs={[{ name: "Home", href: "/" }, { name: "Chips" }]}
+>
+  <PageHeader title="Firmware by chip">
+    <p class="mt-3 max-w-3xl text-muted">
+      The system-on-chip (SoC) each firmware is built for, as identified from inside the firmware.{" "}
+      {plural(firmwareCount, "firmware file")} have a known chip so far. Firmware for the same chip often shares a
+      platform, which helps when recovering or modifying a device.
+    </p>
+  </PageHeader>
+
+  {
+    socs.length === 0 ? (
+      <p class="card p-6 text-muted">No chip information yet.</p>
+    ) : (
+      <>
+        <nav aria-label="Jump to chip vendor" class="mb-6 flex flex-wrap gap-2 text-sm">
+          {sorted.map(([vendor, list]) => (
+            <a href={`#${anchor(vendor)}`} class="rounded-md border border-border bg-surface px-3 py-1 no-underline hover:border-accent">
+              {vendor} <span class="text-muted">· {list.length}</span>
+            </a>
+          ))}
+        </nav>
+        <div class="space-y-8">
+          {sorted.map(([vendor, list]) => (
+            <section id={anchor(vendor)} aria-labelledby={`${anchor(vendor)}-h`} class="scroll-mt-24">
+              <h2 id={`${anchor(vendor)}-h`} class="section-title">
+                {vendor} <span class="text-sm font-normal text-muted">({plural(list.length, "chip")})</span>
+              </h2>
+              <ul class="flex flex-wrap gap-2">
+                {list.map((soc) => (
+                  <li>
+                    <a href={paths.soc(soc)} class="chip">
+                      {soc.name}
+                      <span class="ml-1.5 text-xs text-muted">{soc.firmwares.length}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
+      </>
+    )
+  }
+</BaseLayout>

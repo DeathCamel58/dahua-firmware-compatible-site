@@ -1,0 +1,49 @@
+---
+import type { GetStaticPaths } from "astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import FirmwareList from "@/components/FirmwareList.astro";
+import PageHeader from "@/components/PageHeader.astro";
+import Pager from "@/components/Pager.astro";
+import { getData, lastmodOf, paths } from "@/lib/data";
+import { FIRMWARE_PAGE_SIZE, pageOf, pageParams, pageSuffix } from "@/lib/paginate";
+import { plural } from "@/lib/site";
+
+// /vendor/<slug>/firmware/ is page 1; /vendor/<slug>/firmware/2/ and on follow.
+export const getStaticPaths = (async () => {
+  const data = await getData();
+  return [...data.vendors.values()].flatMap((v) =>
+    pageParams(v.firmwares.length, FIRMWARE_PAGE_SIZE).map(({ page, number }) => ({
+      params: { slug: v.slug, page },
+      props: { name: v.name, page: number },
+    })),
+  );
+}) satisfies GetStaticPaths;
+
+const data = await getData();
+const vendor = data.vendors.get(Astro.props.name)!;
+const list = pageOf(vendor.firmwares, Astro.props.page, FIRMWARE_PAGE_SIZE);
+const firmwares = list.items.map((f) => data.firmwares.get(f)!);
+const range = `${list.from.toLocaleString("en-US")}–${list.to.toLocaleString("en-US")}`;
+const pageTitle = `All ${vendor.name} firmware${pageSuffix(list.page, list.pages)}`;
+---
+
+<BaseLayout
+  title={pageTitle}
+  description={`${plural(list.total, "firmware file")} published by ${vendor.name}, newest first${list.pages > 1 ? `: files ${range}` : ""}. Download links and the Dahua hardware each one supports.`}
+  lastmod={lastmodOf(firmwares)}
+  breadcrumbs={[
+    { name: "Home", href: "/" },
+    { name: "Vendors", href: "/vendor/" },
+    { name: vendor.name, href: paths.vendor(vendor) },
+    { name: list.pages > 1 ? `All firmware, page ${list.page}` : "All firmware" },
+  ]}
+>
+  <PageHeader eyebrow={vendor.name} title={pageTitle}>
+    <p class="mt-3 text-muted">
+      {plural(list.total, "file")}, newest first{list.pages > 1 && `. Showing ${range}`}.
+    </p>
+  </PageHeader>
+
+  <FirmwareList firmwares={firmwares} />
+  <Pager page={list.page} pages={list.pages} base={paths.vendorFirmware(vendor)} />
+</BaseLayout>
