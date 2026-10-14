@@ -1,5 +1,8 @@
 ---
-/** Minimal page for legacy URLs: points browsers and crawlers at the new location. */
+/**
+ * Minimal page for legacy URLs: points browsers and crawlers at the new location.
+ * Never mark it noindex: that conflicts with the canonical and drops the old URL's ranking instead of passing it on.
+ */
 interface Props {
   to: string;
 }
@@ -14,7 +17,6 @@ const canonical = new URL(to, Astro.site).href;
     <meta charset="utf-8" />
     <title>Moved</title>
     <link rel="canonical" href={canonical} />
-    <!-- No robots noindex here: it would conflict with the canonical and drop the old URL's ranking instead of passing it on. -->
     <meta http-equiv="refresh" content={`0; url=${to}`} />
   </head>
   <body>
