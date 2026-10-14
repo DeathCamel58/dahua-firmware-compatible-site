@@ -663,6 +663,20 @@
     "notes": "Only size the site offers (160x100); no vector or larger version found. Already transparent. Dark 'TECHNOLOGY' text needs a light background."
   },
   {
+    "name": "Security Point",
+    "slug": "secpoint",
+    "status": "reseller",
+    "statusNote": "Italian security distributor (Security Point, Molfetta, since 1994) whose site secpoint.it hosts Dahua firmware folders; listed in the firmware data as vendor \"SecPoint\". Not in IPVM's OEM list",
+    "website": "https://secpoint.it",
+    "logo": "logos/secpoint.png",
+    "background": "light",
+    "width": 433,
+    "height": 74,
+    "source": "Supplied by the site owner (security-point-logo.jpg, actually a PNG)",
+    "quality": "official-raster",
+    "notes": "Already transparent. Black text and the 'Professionisti dal 1994' tagline need a light background. Not to be confused with SecPoint (secpoint.com), the unrelated Danish IT-security company."
+  },
+  {
     "name": "Viatec",
     "slug": "viatec",
     "status": "reseller",
