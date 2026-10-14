@@ -17,9 +17,11 @@ interface Props {
   hideHeaderSearch?: boolean;
   /** When the page's content last changed (YYYY-MM-DD); also feeds <lastmod> in the sitemap. */
   lastmod?: string | null;
+  /** Open Graph type: "article" for single-item pages such as a firmware file. */
+  ogType?: "website" | "article";
 }
 
-const { title, breadcrumbs, jsonLd = [], noindex = false, hideHeaderSearch = false, lastmod } = Astro.props;
+const { title, breadcrumbs, jsonLd = [], noindex = false, hideHeaderSearch = false, lastmod, ogType = "website" } = Astro.props;
 const ogImage = new URL("/og-image.png", Astro.site).href;
 // Only add the site name when the result still fits in a search result (~60 characters).
 const withSite = `${title} | ${SITE_NAME}`;
@@ -58,7 +60,7 @@ if (breadcrumbs && breadcrumbs.length > 0) {
     <meta name="theme-color" content="#f7f8fa" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0d1117" media="(prefers-color-scheme: dark)" />
 
-    <meta property="og:type" content="website" />
+    <meta property="og:type" content={ogType} />
     <meta property="og:site_name" content={SITE_NAME} />
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />

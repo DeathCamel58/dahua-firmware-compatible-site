@@ -792,6 +792,31 @@ export const paths = {
   soc: (s: Pick<Soc, "slug">) => `/soc/${s.slug}/`,
 };
 
+/** What kind of product a Dahua device ID names, from its well-known prefix (null when unsure). */
+const DEVICE_CATEGORIES: Record<string, string> = {
+  IPC: "IP camera",
+  TPC: "Thermal camera",
+  SD: "PTZ camera",
+  PTZ: "PTZ camera",
+  ITC: "Traffic camera",
+  NVR: "Network video recorder",
+  XVR: "Digital video recorder",
+  HCVR: "Digital video recorder",
+  DVR: "Digital video recorder",
+  IVSS: "Video surveillance server",
+  NVD: "Video decoder",
+  VTO: "Video intercom door station",
+  VTH: "Video intercom indoor monitor",
+  ASI: "Access control terminal",
+  ASC: "Access controller",
+  ARC: "Alarm controller",
+};
+
+export function deviceCategory(device: Pick<Device, "name">): string | null {
+  const prefix = device.name.match(/^[A-Za-z]+/)?.[0].toUpperCase();
+  return (prefix && DEVICE_CATEGORIES[prefix]) || null;
+}
+
 export function formatDate(iso: string | null): string | null {
   if (!iso) return null;
   const [y, m, d] = iso.split("-").map(Number);

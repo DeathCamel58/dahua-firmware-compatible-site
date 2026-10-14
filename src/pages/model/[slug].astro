@@ -44,11 +44,40 @@ const description = composeDescription([
   { lead: "Runs on Dahua hardware", items: devices.map((d) => d.name) },
   "Download links and archived copies",
 ]);
+const site = Astro.site!;
+// Only claim a manufacturer when a single vendor sells the model under its own name.
+const maker = brand ? vendors.find((v) => v.name === brand) : undefined;
+const platform = (d: (typeof devices)[number]) => ({ "@type": "ProductModel", name: d.name, url: new URL(paths.device(d), site).href });
+const jsonLd = [
+  {
+    "@context": "https://schema.org",
+    "@type": "ProductModel",
+    name: fullName,
+    ...(maker ? { manufacturer: { "@type": "Organization", name: maker.name, ...(maker.brand?.website ? { url: maker.brand.website } : {}) } } : {}),
+    // The Dahua hardware this retail model is built on (or, when the firmware names several, similar to).
+    ...(devices.length === 1 ? { isVariantOf: platform(devices[0]) } : devices.length > 1 ? { isSimilarTo: devices.map(platform) } : {}),
+    url: new URL(paths.model(model), site).href,
+    description,
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: `${fullName} firmware`,
+    numberOfItems: firmwares.length,
+    itemListElement: firmwares.slice(0, 100).map((fw, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      url: new URL(paths.firmware(fw), site).href,
+      name: fw.title,
+    })),
+  },
+];
 ---
 
 <BaseLayout
   title={pageTitle}
   description={description}
+  jsonLd={jsonLd}
   lastmod={lastmodOf(firmwares)}
   breadcrumbs={[{ name: "Home", href: "/" }, { name: "Retail models", href: "/model/" }, { name: model.name }]}
 >

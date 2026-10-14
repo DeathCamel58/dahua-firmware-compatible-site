@@ -6,7 +6,7 @@ import Pager from "@/components/Pager.astro";
 import FirmwareList from "@/components/FirmwareList.astro";
 import PageHeader from "@/components/PageHeader.astro";
 import Stats from "@/components/Stats.astro";
-import { collect, formatDate, getData, lastmodOf, paths, retailNames, similarDevices } from "@/lib/data";
+import { collect, deviceCategory, formatDate, getData, lastmodOf, paths, retailNames, similarDevices } from "@/lib/data";
 import { composeDescription, plural } from "@/lib/site";
 import { FIRMWARE_PAGE_SIZE, pageOf, pageParams, pageSuffix } from "@/lib/paginate";
 
@@ -44,11 +44,42 @@ const description = composeDescription([
   { lead: "Same hardware sold as", items: retailNames(firmwares) },
   "Download links and archived copies",
 ]);
+const site = Astro.site!;
+const category = deviceCategory(device);
+const jsonLd = [
+  // The hardware itself, described once, on its main page.
+  ...(first
+    ? [
+        {
+          "@context": "https://schema.org",
+          "@type": "ProductModel",
+          name: device.name,
+          ...(category ? { category } : {}),
+          manufacturer: { "@type": "Organization", name: "Dahua Technology" },
+          url: new URL(paths.device(device), site).href,
+          description,
+        },
+      ]
+    : []),
+  {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: `${device.name} firmware`,
+    numberOfItems: list.total,
+    itemListElement: list.items.map((fw, i) => ({
+      "@type": "ListItem",
+      position: list.from + i,
+      url: new URL(paths.firmware(fw), site).href,
+      name: fw.title,
+    })),
+  },
+];
 ---
 
 <BaseLayout
   title={`${device.name} firmware downloads${pageSuffix(list.page, list.pages)}`}
   description={description}
+  jsonLd={jsonLd}
   lastmod={lastmodOf(list.items)}
   breadcrumbs={[
     { name: "Home", href: "/" },
