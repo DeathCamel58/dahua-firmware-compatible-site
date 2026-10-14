@@ -5,7 +5,8 @@
  * Parameter names and values are registered in GA4 (custom dimensions, a key event), so keep them
  * exactly as they are, and keep the value sets closed:
  *   firmware_download  firmware, source (archive|wayback|vendor), placement (page|list), link_domain
- *   search             search_term, results_count (number), placement (header|home|page|search page)
+ *   search             search_term, results_count (number: every match, not just those shown),
+ *                      placement (header|home|search page|404|listing; kept apart from the download values)
  *   select_content     content_type (device|model|firmware|chip), item_id, search_term
  *   search_no_results  search_term
  *   copy               content (a label such as device_name or magicbox_url, never the copied text)
@@ -31,11 +32,45 @@ export function track(name: string, params: Params = {}) {
   window.gtag?.("event", name, clean);
 }
 
-/** Where a search box sits: the header, the home page, or the body of some other page (404, model index…). */
+/** Where a search box sits, by its input id. */
+const SEARCH_PLACEMENTS: Record<string, string> = {
+  "header-search": "header",
+  "hero-search": "home",
+  "page-search": "search page",
+  // Searches from a 404 point at broken inbound links, so they get their own value.
+  "notfound-search": "404",
+  "compat-search": "listing",
+  "model-search": "listing",
+};
+
 export function searchPlacement(input: HTMLInputElement): string {
-  if (input.id === "header-search") return "header";
-  if (input.id === "hero-search") return "home";
-  return "page";
+  // An unmapped search box silently counts as "listing". When adding a box whose searches matter on their
+  // own (another 404-style page, say), give it an id above and a placement value of its own.
+  return SEARCH_PLACEMENTS[input.id] ?? "listing";
+}
+
+/** sessionStorage key for the last search recorded, so a search isn't counted twice across pages. */
+const DEDUPE_KEY = "lastSearch";
+/** Repeating the same term within this long counts as the same search. */
+const DEDUPE_MS = 10_000;
+
+/**
+ * A search that was run: always `search` (zero results included), plus `search_no_results` when nothing
+ * matched. A no-match query in a search box is recorded after a pause; if the user then presses Enter, the
+ * /search/ page runs the same term again, so a repeat within DEDUPE_MS is dropped. That survives the page
+ * change because it's kept in sessionStorage.
+ */
+export function trackSearch(searchTerm: string, resultsCount: number, placement: string) {
+  const now = Date.now();
+  try {
+    const previous = JSON.parse(sessionStorage.getItem(DEDUPE_KEY) || "null");
+    if (previous && previous.term === searchTerm && now - previous.ts < DEDUPE_MS) return;
+    sessionStorage.setItem(DEDUPE_KEY, JSON.stringify({ term: searchTerm, ts: now }));
+  } catch {
+    // Storage unavailable (private mode, blocked): count it anyway.
+  }
+  track("search", { search_term: searchTerm, results_count: resultsCount, placement });
+  if (resultsCount === 0) track("search_no_results", { search_term: searchTerm });
 }
 
 /**
@@ -68,7 +103,7 @@ export function initClickTracking() {
 export function trackSelect(row: HTMLAnchorElement) {
   // Picking a suggestion skips the search page, so the search itself is recorded here.
   const placement = row.dataset.searchPlacement;
-  if (placement) track("search", { search_term: row.dataset.searchTerm, placement });
+  if (placement) trackSearch(row.dataset.searchTerm ?? "", Number(row.dataset.resultsCount), placement);
   track("select_content", {
     content_type: row.dataset.resultType,
     item_id: row.dataset.resultName,

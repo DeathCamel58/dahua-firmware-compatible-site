@@ -24,9 +24,9 @@ import Search from "@/components/Search.astro";
 </BaseLayout>
 
 <script>
-  import { TYPE_DEVICE, TYPE_FIRMWARE, TYPE_MODEL, TYPE_SOC, loadIndex, search, type EntryType } from "@/scripts/search-core";
+  import { TYPE_DEVICE, TYPE_FIRMWARE, TYPE_MODEL, TYPE_SOC, loadIndex, searchWithTotal, type EntryType } from "@/scripts/search-core";
   import { renderResultRow } from "@/scripts/search-box";
-  import { track } from "@/scripts/analytics";
+  import { searchPlacement, trackSearch } from "@/scripts/analytics";
 
   const container = document.getElementById("search-results")!;
   const input = document.getElementById("page-search") as HTMLInputElement;
@@ -49,13 +49,12 @@ import Search from "@/components/Search.astro";
   let trackTimer: ReturnType<typeof setTimeout>;
   let lastTracked = "";
 
-  function trackSearch(query: string, count: number, delay: number) {
+  function trackSearchSoon(query: string, total: number, delay: number) {
     clearTimeout(trackTimer);
     trackTimer = setTimeout(() => {
       if (query === lastTracked) return;
       lastTracked = query;
-      track("search", { search_term: query, results_count: count, placement: "search page" });
-      if (count === 0) track("search_no_results", { search_term: query });
+      trackSearch(query, total, searchPlacement(input));
     }, delay);
   }
 
@@ -66,13 +65,13 @@ import Search from "@/components/Search.astro";
       return container.replaceChildren();
     }
 
-    let results;
+    let results, total;
     try {
-      results = search(await loadIndex(), query, 300);
+      ({ results, total } = searchWithTotal(await loadIndex(), query, 300));
     } catch {
       return message("Couldn't load the search index. Please refresh and try again.");
     }
-    trackSearch(query.trim(), results.length, trackDelay);
+    trackSearchSoon(query.trim(), total, trackDelay);
     if (results.length === 0) {
       return message(`No results for “${query}”. Try a shorter part of the model number, e.g. IPC-HDW2431.`);
     }

@@ -1,5 +1,5 @@
-import { searchPlacement, track, trackSelect } from "./analytics";
-import { TYPE_LABELS, loadIndex, search, type EntryType, type Result } from "./search-core";
+import { searchPlacement, trackSearch, trackSelect } from "./analytics";
+import { TYPE_LABELS, loadIndex, searchWithTotal, type EntryType, type Result } from "./search-core";
 
 const MAX_SUGGESTIONS = 8;
 /** How long a query with no matches has to sit before it counts as a failed search (not just a half-typed one). */
@@ -8,16 +8,25 @@ const NO_RESULTS_DELAY = 1500;
 const CONTENT_TYPES: Record<EntryType, string> = { 0: "device", 1: "model", 2: "firmware", 3: "chip" };
 
 /**
- * One search result link. `query` and `placement` are recorded for analytics when it's opened;
- * `placement` is set only for the suggestion dropdowns, whose searches aren't otherwise tracked.
+ * One search result link. `query` is recorded for analytics when it's opened. The suggestion dropdowns,
+ * whose searches aren't otherwise tracked, also pass `search` (placement and total matches) so opening
+ * the result records the search too.
  */
-export function renderResultRow(result: Result, id?: string, query?: string, placement?: string): HTMLAnchorElement {
+export function renderResultRow(
+  result: Result,
+  id?: string,
+  query?: string,
+  search?: { placement: string; total: number },
+): HTMLAnchorElement {
   const row = document.createElement("a");
   row.href = result.href;
   row.dataset.resultType = CONTENT_TYPES[result.type];
   row.dataset.resultName = result.name;
   if (query) row.dataset.searchTerm = query;
-  if (placement) row.dataset.searchPlacement = placement;
+  if (search) {
+    row.dataset.searchPlacement = search.placement;
+    row.dataset.resultsCount = String(search.total);
+  }
   row.className =
     "flex items-center gap-3 rounded-lg px-3 py-2 text-fg no-underline hover:bg-surface-2 hover:no-underline aria-selected:bg-accent-soft";
   if (id) {
@@ -82,17 +91,19 @@ function setupBox(form: HTMLFormElement) {
     if (!query) return close();
 
     let results: Result[];
+    let total: number;
     try {
-      results = search(await loadIndex(), query, MAX_SUGGESTIONS);
+      ({ results, total } = searchWithTotal(await loadIndex(), query, MAX_SUGGESTIONS));
     } catch {
       return close(); // index unavailable; the form still submits to /search/
     }
     if (current !== requestId) return; // a newer keystroke won
 
     list.replaceChildren();
-    options = results.map((result, i) => renderResultRow(result, `${input.id}-option-${i}`, query, placement));
+    options = results.map((result, i) => renderResultRow(result, `${input.id}-option-${i}`, query, { placement, total }));
     if (options.length === 0) {
-      noResultsTimer = setTimeout(() => track("search_no_results", { search_term: query }), NO_RESULTS_DELAY);
+      // Zero results: record the search and the miss (the user won't pick anything to trigger it).
+      noResultsTimer = setTimeout(() => trackSearch(query, 0, placement), NO_RESULTS_DELAY);
       const empty = document.createElement("p");
       empty.className = "px-3 py-3 text-sm text-muted";
       empty.textContent = "No matches. Try fewer characters, e.g. just the series (IPC-HDW2431).";

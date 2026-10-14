@@ -68,8 +68,13 @@ function describe(type: EntryType, meta: string | number): string {
 }
 
 export function search(index: Prepared, query: string, limit = 10): Result[] {
+  return searchWithTotal(index, query, limit).results;
+}
+
+/** The best `limit` matches, plus how many matched in total (for analytics). */
+export function searchWithTotal(index: Prepared, query: string, limit = 10): { results: Result[]; total: number } {
   const q = normalize(query);
-  if (!q) return [];
+  if (!q) return { results: [], total: 0 };
   const tokens = query.split(/\s+/).map(normalize).filter(Boolean);
 
   const results: Result[] = [];
@@ -99,5 +104,6 @@ export function search(index: Prepared, query: string, limit = 10): Result[] {
     });
   });
 
-  return results.sort((a, b) => b.score - a.score || a.name.localeCompare(b.name)).slice(0, limit);
+  results.sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
+  return { results: results.slice(0, limit), total: results.length };
 }
