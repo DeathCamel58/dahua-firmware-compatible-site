@@ -76,10 +76,20 @@ if (breadcrumbs && breadcrumbs.length > 0) {
 
     {
       /* Google tag (gtag.js). Production builds only, so local dev doesn't record visits.
-         Automated browsers (navigator.webdriver, a headless user agent, or a 1366x1366 screen: a headless
-         crawler with that viewport sent ~20.6k one-page sessions from Singapore on 2026-10-08) are still
+         Automated browsers (navigator.webdriver, a headless user agent, or a square screen) are still
          recorded, but tagged traffic_type=bot so a GA4 data filter can exclude them. traffic_type has to be
-         on the config call, or the page_view it sends goes out untagged. */
+         on the config call, or the page_view it sends goes out untagged.
+
+         Square screens are the strongest bot signal in this property's data: 20,680 sessions across
+         1366x1366 / 1280x1280 / 1600x1600 / 1024x1024, all at ~0.2% engagement and ~1s sessions (the
+         1366x1366 crawler alone sent ~20.6k sessions from Singapore on 2026-10-08). Across 1,431 real
+         sessions and 157 distinct resolutions, not one was square. The width > 0 guard matters: one
+         genuine visitor reported 0x0 (screen API unavailable) and engaged normally.
+
+         Don't extend this to other low-engagement traffic (e.g. the China crawl or the "Unassigned"
+         channel on ordinary 1920x1080 Chrome): any rule that matches a normal desktop fingerprint
+         mislabels real visitors. Those need an edge or server-side answer; see section 1 of the
+         analytics spec. */
       import.meta.env.PROD && (
         <script
           is:inline
@@ -89,8 +99,10 @@ if (breadcrumbs && breadcrumbs.length > 0) {
   window.gtag = function () { dataLayer.push(arguments); };
 
   var s = window.screen || {};
+  // Square screens: no real visitor has had one (see the comment in BaseLayout.astro).
+  var squareViewport = s.width > 0 && s.width === s.height;
   var automated = navigator.webdriver === true ||
-                  (s.width === 1366 && s.height === 1366) ||
+                  squareViewport ||
                   /HeadlessChrome|Headless|Puppeteer|Playwright|PhantomJS/i.test(navigator.userAgent);
 
   var t = document.createElement('script');
