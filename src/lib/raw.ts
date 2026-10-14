@@ -372,11 +372,30 @@ function readPackage(p: Json, layouts: Map<string, Json[]> = new Map()): Firmwar
   };
 }
 
+/**
+ * Display names for vendors whose name in the data isn't the one to show. "SecPoint" is Security Point
+ * (secpoint.it, Molfetta, Italy), not the unrelated Danish IT-security company SecPoint.
+ */
+const VENDOR_DISPLAY_NAMES: Record<string, string> = {
+  SecPoint: "Security Point",
+};
+const vendorName = (value: unknown): string | null => {
+  const name = str(value);
+  return name ? (VENDOR_DISPLAY_NAMES[name] ?? name) : null;
+};
+/** Source labels start with the vendor's name ("SecPoint (secpoint.it)"), so rename that part too. */
+const sourceName = (value: string): string => {
+  for (const [from, to] of Object.entries(VENDOR_DISPLAY_NAMES)) {
+    if (value === from || value.startsWith(`${from} `)) return to + value.slice(from.length);
+  }
+  return value;
+};
+
 function readListing(l: Json): RawListing {
-  const source = str(l.source) ?? str(l.vendor) ?? "Unknown source";
+  const source = sourceName(str(l.source) ?? str(l.vendor) ?? "Unknown source");
   const urlStatus = str(l.url_status) as UrlStatus | null;
   return {
-    vendor: str(l.vendor),
+    vendor: vendorName(l.vendor),
     source,
     camera_name: list(l.camera_name),
     series: list(l.series),
@@ -431,7 +450,7 @@ function readEntry(filename: string, camera: Json | undefined, compat: unknown):
 
   // Listings: the new format has them; old data gets one reconstructed from its top-level fields.
   let listings = Array.isArray(c.listings) ? (c.listings as Json[]).map(readListing) : [];
-  let vendors = list(c.vendors);
+  let vendors = list(c.vendors).map((v) => vendorName(v)!);
   if (listings.length === 0 && camera) {
     const vendor = vendors[0] ?? vendorFromUrl(url);
     listings = [inferListing(c, vendor, url)];

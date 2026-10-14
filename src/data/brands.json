@@ -595,6 +595,20 @@
     "notes": "Colour header logo; already transparent. The site's larger logos are white-only footer variants."
   },
   {
+    "name": "BITS",
+    "slug": "bits",
+    "status": "reseller",
+    "statusNote": "Security distributor in Ecuador (bits.com.ec). A vendor in the firmware data, not in IPVM's OEM list",
+    "website": "http://bits.com.ec/bits/",
+    "logo": "logos/bits.png",
+    "background": "light",
+    "width": 99,
+    "height": 154,
+    "source": "http://bits.com.ec/bits/wp-content/uploads/2016/01/LOGUITO-chiquito.jpg",
+    "quality": "official-raster",
+    "notes": "Only logo on the site (Graphene WP theme uses a photo header); small 99x154 stacked JPEG, no larger/horizontal version found on site or Wayback. White background removed (incl. 'b' counter and the white 'i' cut-out in the circle)."
+  },
+  {
     "name": "Cifra",
     "slug": "cifra",
     "status": "reseller",
@@ -607,6 +621,20 @@
     "source": "https://cifra.cv.ua/images/image/Cifra%20TM%20number.jpg",
     "quality": "official-raster",
     "notes": "No standalone logo exists on the site. Cropped from the site's header banner and separated from its blue background; white artwork, needs a dark background."
+  },
+  {
+    "name": "EasyCam",
+    "slug": "easycam",
+    "status": "reseller",
+    "statusNote": "Polish house brand sold by Eltrox; firmware on ftp.eltrox.pl. A vendor in the firmware data, not in IPVM's OEM list",
+    "website": "https://easycam.pl",
+    "logo": "logos/easycam.png",
+    "background": "light",
+    "width": 505,
+    "height": 92,
+    "source": "https://www.eltrox.pl/img/m/5-large_default.jpg",
+    "quality": "official-raster",
+    "notes": "Eltrox brand-page logo image (manufacturer id 5, /marki/easycam-5). White background removed (edge flood fill, letter counters cleared, eye highlight kept), 2px colour-to-alpha halo, trimmed. The source is JPEG, so a faint compression edge is visible on dark backgrounds. The leftmost edge of the 'e' is clipped by about 1-2px in Eltrox's original. easycam.pl says its products are sold on eltrox.pl; its own header logo is only a 288px white-on-dark screenshot. Grey and teal artwork needs a light tile."
   },
   {
     "name": "Eltrox",
@@ -636,6 +664,62 @@
     "notes": "Square logo (navy 'E' box with 'EmpireTech' underneath) on white, not a horizontal wordmark. The site header is plain text. The older 2021 'ETC Empire Technology Company' crown logo is retired. Background removed (made transparent); original was on a solid grey background."
   },
   {
+    "name": "Global DS",
+    "slug": "global-ds",
+    "status": "reseller",
+    "statusNote": "Hungarian security distributor (Global DS Hungary Kft.); firmware on dsszaki.dsbolt.hu. A vendor in the firmware data, not in IPVM's OEM list",
+    "website": "https://www.dsbolt.hu",
+    "logo": "logos/global-ds.png",
+    "background": "light",
+    "width": 220,
+    "height": 60,
+    "source": "https://www.dsbolt.hu/!common_design/custom/dsbolt.unas.hu/element/layout_hu_header_logo-400x120_1_default.png?time=1649481654",
+    "quality": "official-raster",
+    "notes": "dsbolt.hu is the shop of Global DS Hungary Kft. (site title/og:site_name 'dsbolt - Global DS Hungary Kft.'); logo is the red 'dsbolt' wordmark, not a 'Global DS' wordmark. globalds.hu does not resolve; globalds.eu is a parked domain. Already transparent; small (220x60). The logo reads \"dsbolt\", the shop brand of Global DS Hungary Kft."
+  },
+  {
+    "name": "ip-phone-forum.de",
+    "slug": "ip-phone-forum-de",
+    "status": "community",
+    "statusNote": "German IP-telephony community forum; firmware shared by its members. A vendor in the firmware data, not in IPVM's OEM list",
+    "website": "https://www.ip-phone-forum.de",
+    "logo": "logos/ip-phone-forum-de.png",
+    "background": "dark",
+    "width": 240,
+    "height": 46,
+    "source": "https://web.archive.org/web/20260827182200id_/https://www.ip-phone-forum.de/styles/ippf-logo@2x.png",
+    "quality": "archive",
+    "notes": "Live site behind a Cloudflare challenge (403 / 'Just a moment' even in headless Chrome); header logo /styles/ippf-logo@2x.png taken from Wayback Machine (Aug 2026 capture). White artwork on transparent, needs a dark tile. Small."
+  },
+  {
+    "name": "IPCamTalk",
+    "slug": "ipcamtalk",
+    "status": "community",
+    "statusNote": "IP-camera community forum; firmware shared by its members. A vendor in the firmware data, not in IPVM's OEM list",
+    "website": "https://ipcamtalk.com",
+    "logo": "logos/ipcamtalk.png",
+    "background": "light",
+    "width": 416,
+    "height": 109,
+    "source": "https://ipcamtalk.com/ip-camera-forum.png",
+    "quality": "official-raster",
+    "notes": "2x header logo from srcset. Already transparent; 'cam' is black ink, needs a light tile. Trimmed padding."
+  },
+  {
+    "name": "Kenik",
+    "slug": "kenik",
+    "status": "reseller",
+    "statusNote": "Polish house brand sold by Eltrox; firmware on ftp.eltrox.pl. A vendor in the firmware data, not in IPVM's OEM list",
+    "website": "https://kenik.pl",
+    "logo": "logos/kenik.svg",
+    "background": "light",
+    "width": 129,
+    "height": 42,
+    "source": "https://ftp.eltrox.pl/KATALOGI/KENIK/Katalog%20Kenik_2023.pdf",
+    "quality": "official-vector",
+    "notes": "Vector logo extracted from the cover of Eltrox's official Kenik 2023 product catalog (page 1, pdftocairo -> SVG, canvas cropped to logo bounds). No background element present. Matches the logo on eltrox.pl/marki/kenik-11 and kenik.pl. Dark-grey ink with blue gradient 'e', so it needs a light tile."
+  },
+  {
     "name": "Loryta",
     "slug": "loryta",
     "status": "reseller",
@@ -647,6 +731,34 @@
     "source": null,
     "quality": "missing",
     "notes": "No official site: loryta.com is parked and was an unrelated clothing site in 2014. Loryta is the Amazon-only sister label of EmpireTech (same seller, Andy), so the EmpireTech logo could stand in."
+  },
+  {
+    "name": "Lupus Electronics",
+    "slug": "lupus-electronics",
+    "status": "reseller",
+    "statusNote": "German smart-home and security brand. A vendor in the firmware data, not in IPVM's OEM list",
+    "website": "https://www.lupus-electronics.de",
+    "logo": "logos/lupus-electronics.svg",
+    "background": "light",
+    "width": 141,
+    "height": 40,
+    "source": "https://www.lupus-electronics.de/themes/lupus/css/images/lupus-electronics.svg",
+    "quality": "official-vector",
+    "notes": "Header logo set via CSS background-image. No background element. 'ELECTRONICS' is black ink, needs a light tile."
+  },
+  {
+    "name": "Notis",
+    "slug": "notis",
+    "status": "reseller",
+    "statusNote": "Older Eltrox house brand; firmware on ftp.eltrox.pl. A vendor in the firmware data, not in IPVM's OEM list",
+    "website": null,
+    "logo": "logos/notis.png",
+    "background": "dark",
+    "width": 478,
+    "height": 56,
+    "source": "https://ftp.eltrox.pl/INSTRUKCJE/NOTIS/user_manual.pdf",
+    "quality": "official-raster",
+    "notes": "Legacy brand with no current site or eltrox.pl brand page. White italic 'NOTIS' wordmark taken from the cover image of the Notis DVR manual on Eltrox's file server (image embedded at 89 ppi, vertically flipped in the PDF). The dark gradient background and the mirror reflection under the wordmark were removed; alpha comes from luminance. The same wordmark appears on the Notis DVR front panel in alarm_notis.pdf. Low resolution: 478px wide. White artwork, so it needs a dark tile."
   },
   {
     "name": "Rhino",
@@ -663,6 +775,20 @@
     "notes": "Only size the site offers (160x100); no vector or larger version found. Already transparent. Dark 'TECHNOLOGY' text needs a light background."
   },
   {
+    "name": "Santronic",
+    "slug": "santronic",
+    "status": "reseller",
+    "statusNote": "Swiss security distributor; firmware on service.santronic.ch. A vendor in the firmware data, not in IPVM's OEM list",
+    "website": "https://www.santronic.ch",
+    "logo": "logos/santronic.png",
+    "background": "light",
+    "width": 709,
+    "height": 267,
+    "source": "https://www.santronic.ch/bilder/intern/shoplogo/SANTRONIC_JPG_01.jpg",
+    "quality": "official-raster",
+    "notes": "Santronic AG 'electronic systems' logo from JPEG with white background. Frame gradient fades to white, so the white was unmatted against the solid navy ink (fade-to-white became fade-to-transparent); appearance on white unchanged."
+  },
+  {
     "name": "Security Point",
     "slug": "secpoint",
     "status": "reseller",
@@ -677,6 +803,48 @@
     "notes": "Already transparent. Black text and the 'Professionisti dal 1994' tagline need a light background. Not to be confused with SecPoint (secpoint.com), the unrelated Danish IT-security company."
   },
   {
+    "name": "SNR",
+    "slug": "snr",
+    "status": "reseller",
+    "statusNote": "Network equipment vendor (SNR / NAG); mirrors Dahua firmware. A vendor in the firmware data, not in IPVM's OEM list",
+    "website": "https://snr.systems",
+    "logo": "logos/snr.png",
+    "background": "light",
+    "width": 1128,
+    "height": 368,
+    "source": "https://cdn.nag.ru/snrsystems.public.site/site/build/images/logo_snr.png",
+    "quality": "official-raster",
+    "notes": "SNR (NAG) network equipment, header logo from snr.systems. Already transparent. Grey wordmark is mid-tone, readable on both but best on light."
+  },
+  {
+    "name": "Sveistrup",
+    "slug": "sveistrup",
+    "status": "reseller",
+    "statusNote": "Danish security distributor. A vendor in the firmware data, not in IPVM's OEM list",
+    "website": "https://www.sveistrup.dk",
+    "logo": "logos/sveistrup.svg",
+    "background": "light",
+    "width": 333,
+    "height": 60,
+    "source": "https://www.sveistrup.dk/files/sveistrup/layout/Sveistrup-logo.svg",
+    "quality": "official-vector",
+    "notes": "Logo is white SVEISTRUP lettering on a navy (#24235b) bar, with letters breaking out of the bar's lower edge; the site shows it on a white header. The navy rect is the logo's badge artwork, not a page background, so it was kept. Shown best on a light tile. The navy bar is part of the logo (the letters break out of it), so it was kept; everything outside it is transparent."
+  },
+  {
+    "name": "TVC",
+    "slug": "tvc",
+    "status": "reseller",
+    "statusNote": "Mexican security distributor (TVC enLínea); firmware shared on foro.tvc.mx. A vendor in the firmware data, not in IPVM's OEM list",
+    "website": "https://tvc.mx",
+    "logo": "logos/tvc.svg",
+    "background": "light",
+    "width": 2595,
+    "height": 701,
+    "source": "https://tvc.mx/images/store/tvc-logo.svg",
+    "quality": "official-vector",
+    "notes": "TVC en Línea (Mexican security wholesaler) header wordmark 'TVC enLínea.com - Soluciones de seguridad electrónica'; same logo used on foro.tvc.mx. TVC letters are cut-outs of the navy circle. No background element."
+  },
+  {
     "name": "Viatec",
     "slug": "viatec",
     "status": "reseller",
@@ -689,6 +857,20 @@
     "source": "https://viatec.ua/img/header/logo.svg",
     "quality": "official-vector",
     "notes": "Header SVG; already transparent."
+  },
+  {
+    "name": "Winco",
+    "slug": "winco",
+    "status": "reseller",
+    "statusNote": "Hong Kong distributor Winco (Pacific) Limited; firmware on ftp.winco.com.hk. A vendor in the firmware data, not in IPVM's OEM list",
+    "website": "https://www.winco.com.hk",
+    "logo": "logos/winco.png",
+    "background": "light",
+    "width": 346,
+    "height": 66,
+    "source": "https://www.winco.com.hk/flash/logo.jpg",
+    "quality": "official-raster",
+    "notes": "Winco (Pacific) Limited, Hong Kong; same domain as ftp.winco.com.hk and site lists Dahua among its brands. White JPEG background removed; small (346x66)."
   },
   {
     "name": "XtendLan",
