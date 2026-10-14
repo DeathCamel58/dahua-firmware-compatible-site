@@ -11,6 +11,7 @@ import VendorLogo from "@/components/VendorLogo.astro";
 import Warning from "@/components/Warning.astro";
 import {
   analysisLabel,
+  detectedFormatText,
   formatDate,
   formatSize,
   getData,
@@ -140,6 +141,9 @@ const SOURCE_TEXT: Record<string, string> = {
   install: "the installer's device list (board families)",
   install_lua: "the installer script's board checks",
   uboot: "the bootloader's board name",
+  dhi7: "the firmware image header's device type",
+  android_ota: "the Android update's target device",
+  folder: "the folder the vendor published it in",
 };
 const checksums = [
   ["MD5", fw.md5],
@@ -234,6 +238,13 @@ const checksums = [
           </p>
         ) : (
           <p class="text-muted">No working download link is known for this file.</p>
+        )}
+        {fw.archiveRefused && !fw.archiveUrl && (
+          <p class="mt-3 text-sm text-muted">
+            The Internet Archive declined to keep a copy of this file
+            ({fw.archiveRefused.replace(/^Uploaded content is unacceptable\.\s*-\s*/i, "")}), so the links below are the
+            only sources.
+          </p>
         )}
 
         {(checksums.length > 0 || fw.changelog) && (
@@ -435,8 +446,10 @@ const checksums = [
           <p class="text-muted">
             {notDahua
               ? "Not analysed, because this isn't Dahua firmware."
+              : fw.analysis === "encrypted" || fw.analysis === "mcu"
+                ? detectedFormatText(fw)
               : fw.analysis === "no_ids"
-                ? "The file unpacked fine, but it has no list of supported hardware. That's common for MCU, access-control and thermal firmware."
+                ? "The file unpacked fine, but it has no list of supported hardware. That's common for access-control and thermal firmware."
                 : fw.analysis === "extract_failed"
                   ? `The file couldn't be unpacked${fw.analysisError ? ` (${fw.analysisError})` : ""}.`
                   : !fw.downloadable

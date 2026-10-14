@@ -7,6 +7,20 @@ export function safeDecode(value: string): string {
   }
 }
 
+/**
+ * Longest slug kept as is: each slug becomes a folder name, file systems refuse names over 255 bytes,
+ * and some data "names" are really long lists of models run together. (The live site already has a
+ * 252-character slug, so the limit can't be lower without changing its URL.)
+ */
+const MAX_SLUG = 252;
+
+/** Short, stable hash (FNV-1a) so a shortened slug stays unique and the same on every build. */
+function shortHash(value: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < value.length; i++) h = Math.imul(h ^ value.charCodeAt(i), 0x01000193);
+  return (h >>> 0).toString(36);
+}
+
 /** Turn an arbitrary firmware/device name into a URL-safe slug. */
 export function slugify(value: string): string {
   const slug = safeDecode(value)
@@ -15,6 +29,7 @@ export function slugify(value: string): string {
     .replace(/[^a-z0-9.]+/g, "-")
     .replace(/\.{2,}/g, ".")
     .replace(/^[-.]+|[-.]+$/g, "");
+  if (slug.length > MAX_SLUG) return `${slug.slice(0, MAX_SLUG - 10).replace(/[-.]+$/, "")}-${shortHash(slug)}`;
   return slug || "item";
 }
 

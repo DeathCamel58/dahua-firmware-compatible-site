@@ -106,6 +106,10 @@ export interface Firmware {
   vendorCopyTruncated: boolean;
   analysis: AnalysisStatus;
   analysisError: string | null;
+  /** encrypted / mcu: the format detected (SS, SE, DHPD, images / DH-UPMCU, cortex_m, intel_hex). */
+  detectedFormat: string | null;
+  /** Why archive.org declined the file, when it did. */
+  archiveRefused: string | null;
   hardware: Hardware;
   /** Where the hardware IDs were read from (extractor v5+; empty for older results). */
   hardwareSources: HardwareSource[];
@@ -529,6 +533,8 @@ async function buildData(): Promise<SiteData> {
       vendorCopyTruncated: e.integrity?.vendorCopyTruncated ?? false,
       analysis: e.analysis.status,
       analysisError: e.analysis.error,
+      detectedFormat: e.analysis.detectedFormat,
+      archiveRefused: e.archive_refused,
       hardware: e.analysis.hardware,
       hardwareSources: e.analysis.hardwareSources,
       packageFormat: e.analysis.packageFormat,
@@ -646,12 +652,29 @@ async function buildData(): Promise<SiteData> {
     models.set(name, { slug: modelSlugs.get(name)!, name, publishers, firmwares: fws });
   }
 
-  const vendorSlugs = assignSlugs(vendorFirmwares.keys());
+  // A vendor's URL uses its logo's slug (/vendor/ens/ for "ENS Security"), which keeps existing URLs.
+  // But logos are also matched loosely by first word ("Dahua India" shows Dahua's logo), so when
+  // several vendors share a logo, only the closest match keeps that slug; the rest get their own.
+  const vendorNames = [...vendorFirmwares.keys()].sort((a, b) => a.localeCompare(b));
+  const claims = new Map<string, string[]>();
+  for (const name of vendorNames) {
+    const slug = brandFor(name)?.slug;
+    if (slug) claims.set(slug, [...(claims.get(slug) ?? []), name]);
+  }
+  const closeness = (name: string, slug: string) =>
+    brandFor(name)!.name.toLowerCase() === name.toLowerCase() ? 0 : slugify(name) === slug ? 1 : 2;
+  const brandSlugOwner = new Map(
+    [...claims].map(([slug, names]) => [slug, [...names].sort((a, b) => closeness(a, slug) - closeness(b, slug) || a.length - b.length)[0]]),
+  );
+  const ownSlugs = assignSlugs(
+    vendorNames.filter((n) => brandSlugOwner.get(brandFor(n)?.slug ?? "") !== n),
+    brandSlugOwner.keys(),
+  );
   const vendors = new Map<string, Vendor>();
   for (const [name, fws] of [...vendorFirmwares].sort(([a], [b]) => a.localeCompare(b))) {
     vendors.set(name, {
       name,
-      slug: brandFor(name)?.slug ?? vendorSlugs.get(name)!,
+      slug: brandSlugOwner.get(brandFor(name)?.slug ?? "") === name ? brandFor(name)!.slug : ownSlugs.get(name)!,
       brand: brandFor(name),
       firmwares: fws,
       models: [...(vendorModels.get(name) ?? [])].sort(),
@@ -801,6 +824,10 @@ export function analysisLabel(fw: Firmware): string {
       return fw.devices.length ? `${fw.devices.length} device${fw.devices.length === 1 ? "" : "s"}` : "Hardware IDs only";
     case "no_ids":
       return "No hardware IDs found";
+    case "encrypted":
+      return "Encrypted firmware";
+    case "mcu":
+      return "Microcontroller firmware";
     case "extract_failed":
       return "Couldn't be analysed";
     case "not_dahua":
@@ -863,3 +890,26 @@ export function groupBySeries(names: string[], minSize = 3): NameGroup[] {
 
 /** Vendors with more models than this get one page per series instead of a single list. */
 export const MODELS_PER_PAGE_LIMIT = 300;
+
+/** Plain-language explanation of why an encrypted or microcontroller firmware has no hardware list. */
+export function detectedFormatText(fw: Firmware): string | null {
+  const format = fw.detectedFormat;
+  if (fw.analysis === "encrypted") {
+    const kind =
+      format === "SS" ? " (the format Dahua uses for NVR4/NVR5 EI and XI builds)"
+      : format === "SE" ? " (the format used for XVR AstonDB and NVR6 I builds)"
+      : format === "DHPD" ? " (the format used for IVSS builds)"
+      : format === "images" ? " (the package opens, but every image inside it is encrypted)"
+      : "";
+    return `This firmware is encrypted${kind}, so its contents, including its list of supported hardware, can't be read. Use the model names the vendors list for it instead.`;
+  }
+  if (fw.analysis === "mcu") {
+    const kind =
+      format === "DH-UPMCU" ? " in Dahua's MCU upgrade format"
+      : format === "cortex_m" ? " (a bare ARM Cortex-M image)"
+      : format === "intel_hex" ? " (an Intel HEX image)"
+      : "";
+    return `This is microcontroller firmware${kind}: it updates a small chip inside a device, such as a PTZ motor controller, door station or access controller, not the device's main system. It has no operating system and no list of supported hardware.`;
+  }
+  return null;
+}

@@ -860,6 +860,26 @@
   "name": "V2.626.18LK003.0.R.230613"
  },
  {
+  "path": "/firmware/202204042148247244.zip/",
+  "kind": "firmware",
+  "name": "DH_NVR4x-4KS2L_MultiLang_V4.002.0000000.3.R.220322.zip"
+ },
+ {
+  "path": "/firmware/202204042151287146.zip/",
+  "kind": "firmware",
+  "name": "DH_NVR5XXX-4KS2_MultiLang_V4.002.0000000.3.R.220322.zip"
+ },
+ {
+  "path": "/firmware/202204042156054119.zip/",
+  "kind": "firmware",
+  "name": "General_NVR4x-4KS2L_MultiLang_V4.002.0000000.3.R.220322.zip"
+ },
+ {
+  "path": "/firmware/202204042157111323.zip/",
+  "kind": "firmware",
+  "name": "General_NVR5XXX-4KS2_MultiLang_V4.002.0000000.3.R.220322.zip"
+ },
+ {
   "path": "/model/nvr4xx/",
   "kind": "model",
   "name": "NVR4XX"

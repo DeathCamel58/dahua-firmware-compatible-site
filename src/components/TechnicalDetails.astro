@@ -13,6 +13,9 @@ const FORMAT_LABELS: Record<string, string> = {
   zip: "Zip archive",
   dh: "Dahua package (zip variant)",
   dhsp: "Dahua PTZ package",
+  dhi7: "Dahua DHI7 image",
+  rar: "RAR archive",
+  "7z": "7z archive",
   bundle: "Bundle of several firmwares",
   other: "Other format",
 };
@@ -70,10 +73,29 @@ const blocks = fw.packages.map((p) => {
     { label: "Language & video", value: locale.length ? locale.join(" · ") : null, title: languages.join(", ") || undefined },
     { label: "Software version", value: p.softwareVersion },
     { label: "Market area", value: p.marketArea },
+    // DHI7 images (x86 recorders, servers, keyboards) name the device type they install on.
+    {
+      label: "Image header",
+      value: p.containerHeader
+        ? [p.containerHeader.device && `for ${p.containerHeader.device}`, p.containerHeader.version, p.containerHeader.language]
+            .filter(Boolean)
+            .join(" · ") || null
+        : null,
+    },
+    // Android-based intercoms and panels.
+    {
+      label: "Android update",
+      value: p.androidOta
+        ? [p.androidOta.devices.length && `for ${p.androidOta.devices.join(", ")}`, p.androidOta.otaType && `${p.androidOta.otaType} update`]
+            .filter(Boolean)
+            .join(" · ") || "Android OTA package"
+        : null,
+      title: p.androidOta?.postBuild ?? undefined,
+    },
   ].filter((row) => row.value);
   return { p, rows, languages };
 });
-const hasDetails = blocks.some((b) => b.rows.length || b.p.partitions.length);
+const hasDetails = blocks.some((b) => b.rows.length || b.p.partitions.length || b.p.containerHeader?.images.length);
 ---
 
 {
@@ -104,6 +126,33 @@ const hasDetails = blocks.some((b) => b.rows.length || b.p.partitions.length);
               <details class="mt-3 text-sm">
                 <summary class="cursor-pointer text-muted">Supported languages ({languages.length})</summary>
                 <p class="mt-2">{languages.join(", ")}</p>
+              </details>
+            )}
+            {p.containerHeader && p.containerHeader.images.length > 0 && (
+              <details class="mt-3 text-sm">
+                <summary class="cursor-pointer text-muted">Files it installs ({p.containerHeader.images.length})</summary>
+                <div class="mt-2 overflow-x-auto">
+                  <table class="w-full min-w-[32rem] font-mono text-xs whitespace-nowrap">
+                    <thead class="text-left text-muted">
+                      <tr>
+                        <th scope="col" class="py-1 pr-3 font-medium">Image</th>
+                        <th scope="col" class="py-1 pr-3 font-medium">Version</th>
+                        <th scope="col" class="py-1 pr-3 text-right font-medium">Size</th>
+                        <th scope="col" class="py-1 font-medium">Installed to</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-border">
+                      {p.containerHeader.images.map((img) => (
+                        <tr>
+                          <td class="py-1 pr-3">{img.name ?? "—"}</td>
+                          <td class="py-1 pr-3">{img.version ?? "—"}</td>
+                          <td class="py-1 pr-3 text-right">{formatSize(img.size) ?? "—"}</td>
+                          <td class="py-1">{img.path ?? "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </details>
             )}
             {p.partitions.length > 0 && (

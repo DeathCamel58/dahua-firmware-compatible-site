@@ -6,7 +6,7 @@
 import { safeDecode } from "./slug";
 
 export type Platform = "dahua" | "hikvision" | "unknown";
-export type AnalysisStatus = "ok" | "no_ids" | "extract_failed" | "not_dahua" | "duplicate" | "pending";
+export type AnalysisStatus = "ok" | "no_ids" | "encrypted" | "mcu" | "extract_failed" | "not_dahua" | "duplicate" | "pending";
 export type UrlStatus = "ok" | "dead" | "error" | "unchecked";
 /** vendor: the vendor's own download page; mirror: a file server holding copies; archive: a Wayback Machine capture. */
 export type ListingKind = "vendor" | "mirror" | "archive";
@@ -80,6 +80,16 @@ export interface FirmwarePackage {
   locale: { defaultLanguage: string | null; videoStandard: string | null; supportedLanguages: string[] } | null;
   softwareVersion: string | null;
   marketArea: string | null;
+  /** DHI7 images (x86 recorders, servers, keyboards): the header's device type and the files it installs. */
+  containerHeader: {
+    device: string | null;
+    version: string | null;
+    vendor: string | null;
+    language: string | null;
+    images: { name: string | null; version: string | null; size: number | null; path: string | null }[];
+  } | null;
+  /** Android OTA packages (Android-based intercoms and panels). */
+  androidOta: { devices: string[]; postBuild: string | null; otaType: string | null } | null;
 }
 
 export interface RawListing {
@@ -131,6 +141,8 @@ export interface RawEntry {
   duplicate_of: string | null;
   archive_url: string | null;
   archive_item: string | null;
+  /** Why archive.org declined the file (e.g. password-protected archive members), when it did. */
+  archive_refused: string | null;
   /** A Wayback capture of the listed URL, used because the vendor's own copy couldn't be downloaded. */
   downloaded_from: string | null;
   analysis: {
@@ -139,6 +151,8 @@ export interface RawEntry {
     /** IDs were recovered from the intact start of a truncated file. */
     truncated: boolean;
     error: string | null;
+    /** encrypted / mcu: why there's nothing to read (SS, SE, DHPD, images / DH-UPMCU, cortex_m, intel_hex). */
+    detectedFormat: string | null;
     /** When it was analysed (YYYY-MM-DD), if known. */
     processedAt: string | null;
     hardwareSources: HardwareSource[];
@@ -233,7 +247,7 @@ function readHardware(value: unknown, fallbackIds: string[]): Hardware {
   };
 }
 
-const ANALYSIS_STATUSES = new Set<AnalysisStatus>(["ok", "no_ids", "extract_failed", "not_dahua", "duplicate"]);
+const ANALYSIS_STATUSES = new Set<AnalysisStatus>(["ok", "no_ids", "encrypted", "mcu", "extract_failed", "not_dahua", "duplicate"]);
 const URL_STATUSES = new Set<UrlStatus>(["ok", "dead", "error", "unchecked"]);
 const PLATFORMS = new Set<Platform>(["dahua", "hikvision", "unknown"]);
 
@@ -305,6 +319,8 @@ function readPackage(p: Json, layouts: Map<string, Json[]> = new Map()): Firmwar
   const dates = obj(p.build_dates);
   const security = obj(p.security);
   const locale = obj(p.locale);
+  const header = obj(p.container_header);
+  const ota = obj(p.android_ota);
   return {
     firmware: str(p.firmware),
     format: str(p.package_format),
@@ -338,6 +354,21 @@ function readPackage(p: Json, layouts: Map<string, Json[]> = new Map()): Firmwar
       : null,
     softwareVersion: str(p.software_version),
     marketArea: str(p.market_area),
+    containerHeader: header
+      ? {
+          device: str(header.device),
+          version: str(header.version),
+          vendor: str(header.vendor),
+          language: str(header.language),
+          images: (Array.isArray(header.images) ? (header.images as Json[]) : []).map((i) => ({
+            name: str(i.name),
+            version: str(i.version),
+            size: num(i.size),
+            path: str(i.path),
+          })),
+        }
+      : null,
+    androidOta: ota ? { devices: list(ota.devices), postBuild: str(ota.post_build), otaType: str(ota.ota_type) } : null,
   };
 }
 
@@ -412,7 +443,7 @@ function readEntry(filename: string, camera: Json | undefined, compat: unknown):
   if (Array.isArray(compat)) {
     const hardware = classifyHardware(list(compat));
     const usable = hardware.models.length + hardware.boards.length + hardware.hwids.length > 0;
-    analysis = { status: usable ? "ok" : "no_ids", hardware, truncated: false, error: null, processedAt: null, ...NO_DETAILS };
+    analysis = { status: usable ? "ok" : "no_ids", hardware, truncated: false, error: null, detectedFormat: null, processedAt: null, ...NO_DETAILS };
   } else if (compat && typeof compat === "object") {
     const r = compat as Json;
     const status = str(r.status) as AnalysisStatus | null;
@@ -422,6 +453,7 @@ function readEntry(filename: string, camera: Json | undefined, compat: unknown):
       hardware: readHardware(r.hardware, ids),
       truncated: r.truncated === true,
       error: str(r.error),
+      detectedFormat: str(r.detected_format),
       processedAt: str(r.processed_at)?.slice(0, 10) ?? null,
       hardwareSources: Array.isArray(r.hardware_sources) ? (r.hardware_sources as Json[]).map(readHardwareSource) : [],
       packageFormat: str(r.package_format),
@@ -431,7 +463,7 @@ function readEntry(filename: string, camera: Json | undefined, compat: unknown):
       socs: Array.isArray(r.socs) ? (r.socs as Json[]).map((s) => ({ name: str(s.name), vendor: str(s.vendor) })) : [],
     };
   } else {
-    analysis = { status: "pending", hardware: classifyHardware([]), truncated: false, error: null, processedAt: null, ...NO_DETAILS };
+    analysis = { status: "pending", hardware: classifyHardware([]), truncated: false, error: null, detectedFormat: null, processedAt: null, ...NO_DETAILS };
   }
 
   const hashes = (c.file_hashes ?? {}) as Json;
@@ -468,6 +500,7 @@ function readEntry(filename: string, camera: Json | undefined, compat: unknown):
     duplicate_of: str(c.duplicate_of) ?? str((compat as Json | undefined)?.duplicate_of),
     archive_url: validUrl(c.archive_url),
     archive_item: validUrl(c.archive_item),
+    archive_refused: str(c.archive_refused),
     downloaded_from: validUrl(c.downloaded_from),
     analysis,
   };
