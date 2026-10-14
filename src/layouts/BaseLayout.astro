@@ -111,10 +111,17 @@ if (breadcrumbs && breadcrumbs.length > 0) {
 </html>
 
 <script>
-  // Copy-to-clipboard buttons: <button data-copy="text">
+  import { initClickTracking, track } from "@/scripts/analytics";
+
+  initClickTracking();
+
+  // Copy-to-clipboard buttons: <button data-copy="text" data-copy-kind="name|info_url|…">
   document.addEventListener("click", async (event) => {
     const button = (event.target as Element).closest<HTMLButtonElement>("[data-copy]");
     if (!button) return;
+    const kind = button.dataset.copyKind;
+    // Checksums are long and unique, so only their kind is worth recording.
+    track("copy", { content_type: kind, item_id: kind?.startsWith("checksum") ? undefined : button.dataset.copy });
     try {
       await navigator.clipboard.writeText(button.dataset.copy ?? "");
       const label = button.querySelector("[data-copy-label]");

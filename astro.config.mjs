@@ -50,7 +50,7 @@ function sitemapXml() {
             const lastmod = html.match(/<meta property="og:updated_time" content="(\d{4}-\d{2}-\d{2})"/)?.[1];
             if (lastmod) dated++;
             const segment = pathname.split("/")[1];
-            const section = sections.get(sections.has(segment) ? segment : SITEMAP_SECTIONS.at(-1));
+            const section = /** @type {{ entries: string[], lastmod: string }} */ (sections.get(segment) ?? sections.get(SITEMAP_SECTIONS[SITEMAP_SECTIONS.length - 1]));
             section.entries.push(lastmod && !entry.includes("<lastmod>") ? entry.replace("</loc>", `</loc><lastmod>${lastmod}</lastmod>`) : entry);
             if (lastmod && lastmod > section.lastmod) section.lastmod = lastmod;
           }

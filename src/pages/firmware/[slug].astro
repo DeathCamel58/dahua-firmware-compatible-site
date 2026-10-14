@@ -204,7 +204,14 @@ const checksums = [
         <h2 id="download-heading" class="section-title">Download</h2>
         {fw.download ? (
           <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <a href={fw.download.url} class:list={[fw.truncated ? "btn-ghost" : "btn-primary", "self-start"]} rel="nofollow noopener">
+            <a
+              href={fw.download.url}
+              data-download={fw.filename}
+              data-source={fw.download.kind}
+              data-placement={fw.truncated ? "page_truncated" : "page"}
+              class:list={[fw.truncated ? "btn-ghost" : "btn-primary", "self-start"]}
+              rel="nofollow noopener"
+            >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <path d="M12 3v12m0 0-5-5m5 5 5-5M4 21h16" stroke-linecap="round" stroke-linejoin="round" />
               </svg>
@@ -255,7 +262,7 @@ const checksums = [
                 <dt class="w-20 shrink-0 text-muted">{label}</dt>
                 <dd class="flex min-w-0 items-center gap-2">
                   <code class="min-w-0 text-xs break-all">{value}</code>
-                  <button type="button" data-copy={value} class="btn-ghost shrink-0 px-2 py-0.5 text-xs" aria-label={`Copy ${label}`}>
+                  <button type="button" data-copy={value} data-copy-kind={`checksum_${label.toLowerCase().replace("-", "")}`} class="btn-ghost shrink-0 px-2 py-0.5 text-xs" aria-label={`Copy ${label}`}>
                     <span data-copy-label>Copy</span>
                   </button>
                 </dd>

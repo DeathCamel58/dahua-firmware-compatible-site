@@ -26,6 +26,7 @@ import Search from "@/components/Search.astro";
 <script>
   import { TYPE_DEVICE, TYPE_FIRMWARE, TYPE_MODEL, TYPE_SOC, loadIndex, search, type EntryType } from "@/scripts/search-core";
   import { renderResultRow } from "@/scripts/search-box";
+  import { track } from "@/scripts/analytics";
 
   const container = document.getElementById("search-results")!;
   const input = document.getElementById("page-search") as HTMLInputElement;
@@ -43,9 +44,27 @@ import Search from "@/components/Search.astro";
     container.replaceChildren(p);
   };
 
-  async function render(query: string) {
+  // Typing here re-runs the search on every pause; only a query left alone this long counts as a search.
+  const TRACK_DELAY = 1500;
+  let trackTimer: ReturnType<typeof setTimeout>;
+  let lastTracked = "";
+
+  function trackSearch(query: string, count: number, delay: number) {
+    clearTimeout(trackTimer);
+    trackTimer = setTimeout(() => {
+      if (query === lastTracked) return;
+      lastTracked = query;
+      track("search", { search_term: query, results_count: count, placement: "page" });
+      if (count === 0) track("search_no_results", { search_term: query, placement: "page" });
+    }, delay);
+  }
+
+  async function render(query: string, trackDelay = TRACK_DELAY) {
     document.title = query ? `“${query}” · Search | Dahua Firmware Finder` : "Search | Dahua Firmware Finder";
-    if (!query.trim()) return container.replaceChildren();
+    if (!query.trim()) {
+      clearTimeout(trackTimer);
+      return container.replaceChildren();
+    }
 
     let results;
     try {
@@ -53,6 +72,7 @@ import Search from "@/components/Search.astro";
     } catch {
       return message("Couldn't load the search index. Please refresh and try again.");
     }
+    trackSearch(query.trim(), results.length, trackDelay);
     if (results.length === 0) {
       return message(`No results for “${query}”. Try a shorter part of the model number, e.g. IPC-HDW2431.`);
     }
@@ -67,7 +87,7 @@ import Search from "@/components/Search.astro";
       heading.textContent = `${title} (${matches.length}${matches.length >= 100 ? "+" : ""})`;
       const list = document.createElement("div");
       list.className = "card divide-y divide-border p-1";
-      list.append(...matches.slice(0, 100).map((result) => renderResultRow(result)));
+      list.append(...matches.slice(0, 100).map((result) => renderResultRow(result, undefined, query.trim())));
       section.append(heading, list);
       return [section];
     });
@@ -76,7 +96,7 @@ import Search from "@/components/Search.astro";
 
   const initial = new URLSearchParams(location.search).get("q") ?? "";
   input.value = initial;
-  render(initial);
+  render(initial, 0);
 
   // Keep results and the URL in sync while typing on this page.
   let timer: ReturnType<typeof setTimeout>;

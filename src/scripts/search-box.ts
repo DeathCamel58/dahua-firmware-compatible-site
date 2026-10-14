@@ -1,10 +1,21 @@
+import { searchPlacement, track, trackSelect } from "./analytics";
 import { TYPE_LABELS, loadIndex, search, type Result } from "./search-core";
 
 const MAX_SUGGESTIONS = 8;
+/** How long a query with no matches has to sit before it counts as a failed search (not just a half-typed one). */
+const NO_RESULTS_DELAY = 1500;
 
-export function renderResultRow(result: Result, id?: string): HTMLAnchorElement {
+/**
+ * One search result link. `query` and `placement` are recorded for analytics when it's opened;
+ * `placement` is set only for the suggestion dropdowns, whose searches aren't otherwise tracked.
+ */
+export function renderResultRow(result: Result, id?: string, query?: string, placement?: string): HTMLAnchorElement {
   const row = document.createElement("a");
   row.href = result.href;
+  row.dataset.resultType = TYPE_LABELS[result.type];
+  row.dataset.resultName = result.name;
+  if (query) row.dataset.searchTerm = query;
+  if (placement) row.dataset.searchPlacement = placement;
   row.className =
     "flex items-center gap-3 rounded-lg px-3 py-2 text-fg no-underline hover:bg-surface-2 hover:no-underline aria-selected:bg-accent-soft";
   if (id) {
@@ -41,6 +52,8 @@ function setupBox(form: HTMLFormElement) {
   let options: HTMLAnchorElement[] = [];
   let active = -1;
   let requestId = 0;
+  let noResultsTimer: ReturnType<typeof setTimeout> | undefined;
+  const placement = searchPlacement(input);
 
   const close = () => {
     list.hidden = true;
@@ -63,6 +76,7 @@ function setupBox(form: HTMLFormElement) {
   const update = async () => {
     const query = input.value.trim();
     const current = ++requestId;
+    clearTimeout(noResultsTimer);
     if (!query) return close();
 
     let results: Result[];
@@ -74,8 +88,9 @@ function setupBox(form: HTMLFormElement) {
     if (current !== requestId) return; // a newer keystroke won
 
     list.replaceChildren();
-    options = results.map((result, i) => renderResultRow(result, `${input.id}-option-${i}`));
+    options = results.map((result, i) => renderResultRow(result, `${input.id}-option-${i}`, query, placement));
     if (options.length === 0) {
+      noResultsTimer = setTimeout(() => track("search_no_results", { search_term: query, placement }), NO_RESULTS_DELAY);
       const empty = document.createElement("p");
       empty.className = "px-3 py-3 text-sm text-muted";
       empty.textContent = "No matches. Try fewer characters, e.g. just the series (IPC-HDW2431).";
@@ -110,6 +125,7 @@ function setupBox(form: HTMLFormElement) {
       setActive(next);
     } else if (event.key === "Enter" && active >= 0 && options[active]) {
       event.preventDefault();
+      trackSelect(options[active]);
       window.location.href = options[active].href;
     } else if (event.key === "Escape") {
       close();

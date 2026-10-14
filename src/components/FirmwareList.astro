@@ -36,6 +36,9 @@ const { firmwares, showDownload = true } = Astro.props;
           {showDownload && fw.download && !fw.truncated && (
             <a
               href={fw.download.url}
+              data-download={fw.filename}
+              data-source={fw.download.kind}
+              data-placement="list"
               class="btn-ghost shrink-0 self-start px-3 py-1.5 text-sm sm:self-center"
               rel="nofollow noopener"
               aria-label={`Download ${fw.displayName} from ${fw.download.label}`}
