@@ -1,9 +1,11 @@
 import { searchPlacement, track, trackSelect } from "./analytics";
-import { TYPE_LABELS, loadIndex, search, type Result } from "./search-core";
+import { TYPE_LABELS, loadIndex, search, type EntryType, type Result } from "./search-core";
 
 const MAX_SUGGESTIONS = 8;
 /** How long a query with no matches has to sit before it counts as a failed search (not just a half-typed one). */
 const NO_RESULTS_DELAY = 1500;
+/** content_type values for analytics (a closed set registered in GA4). */
+const CONTENT_TYPES: Record<EntryType, string> = { 0: "device", 1: "model", 2: "firmware", 3: "chip" };
 
 /**
  * One search result link. `query` and `placement` are recorded for analytics when it's opened;
@@ -12,7 +14,7 @@ const NO_RESULTS_DELAY = 1500;
 export function renderResultRow(result: Result, id?: string, query?: string, placement?: string): HTMLAnchorElement {
   const row = document.createElement("a");
   row.href = result.href;
-  row.dataset.resultType = TYPE_LABELS[result.type];
+  row.dataset.resultType = CONTENT_TYPES[result.type];
   row.dataset.resultName = result.name;
   if (query) row.dataset.searchTerm = query;
   if (placement) row.dataset.searchPlacement = placement;
@@ -90,7 +92,7 @@ function setupBox(form: HTMLFormElement) {
     list.replaceChildren();
     options = results.map((result, i) => renderResultRow(result, `${input.id}-option-${i}`, query, placement));
     if (options.length === 0) {
-      noResultsTimer = setTimeout(() => track("search_no_results", { search_term: query, placement }), NO_RESULTS_DELAY);
+      noResultsTimer = setTimeout(() => track("search_no_results", { search_term: query }), NO_RESULTS_DELAY);
       const empty = document.createElement("p");
       empty.className = "px-3 py-3 text-sm text-muted";
       empty.textContent = "No matches. Try fewer characters, e.g. just the series (IPC-HDW2431).";

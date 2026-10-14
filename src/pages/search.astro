@@ -54,8 +54,8 @@ import Search from "@/components/Search.astro";
     trackTimer = setTimeout(() => {
       if (query === lastTracked) return;
       lastTracked = query;
-      track("search", { search_term: query, results_count: count, placement: "page" });
-      if (count === 0) track("search_no_results", { search_term: query, placement: "page" });
+      track("search", { search_term: query, results_count: count, placement: "search page" });
+      if (count === 0) track("search_no_results", { search_term: query });
     }, delay);
   }
 

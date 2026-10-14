@@ -163,7 +163,7 @@ const checksums = [
       ogType="article"
       breadcrumbs={[{ name: "Home", href: "/" }, { name: "Firmware", href: "/firmware/" }, { name: fw.displayName }]}
     >
-      <PageHeader eyebrow="Firmware" title={fw.displayName} mono copyable>
+      <PageHeader eyebrow="Firmware" title={fw.displayName} mono copyable="firmware_name">
         <p class="mt-3 max-w-3xl text-muted">{summary}</p>
       </PageHeader>
 
@@ -208,7 +208,7 @@ const checksums = [
               href={fw.download.url}
               data-download={fw.filename}
               data-source={fw.download.kind}
-              data-placement={fw.truncated ? "page_truncated" : "page"}
+              data-placement="page"
               class:list={[fw.truncated ? "btn-ghost" : "btn-primary", "self-start"]}
               rel="nofollow noopener"
             >

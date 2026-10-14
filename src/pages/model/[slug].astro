@@ -92,7 +92,7 @@ const jsonLd = [
       </div>
     )
   }
-  <PageHeader eyebrow={brand ? `${brand} model` : "Retail model"} title={model.name} mono copyable>
+  <PageHeader eyebrow={brand ? `${brand} model` : "Retail model"} title={model.name} mono copyable="model_name">
     <p class="mt-3 max-w-3xl text-muted">
       {listedBy} lists {plural(firmwares.length, "firmware file")} for the <strong class="text-fg">{model.name}</strong>.
       This is the retail model name. Inside the firmware, Dahua uses its own device IDs, listed below, which can lead you

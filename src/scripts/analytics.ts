@@ -1,6 +1,14 @@
 /**
- * Google Analytics events. gtag only exists in production builds for real visitors (see BaseLayout),
- * so these calls do nothing in dev and for the automated browsers it skips.
+ * Google Analytics events. gtag only exists in production builds (see BaseLayout), so these calls do
+ * nothing in dev.
+ *
+ * Parameter names and values are registered in GA4 (custom dimensions, a key event), so keep them
+ * exactly as they are, and keep the value sets closed:
+ *   firmware_download  firmware, source (archive|wayback|vendor), placement (page|list), link_domain
+ *   search             search_term, results_count (number), placement (header|home|page|search page)
+ *   select_content     content_type (device|model|firmware|chip), item_id, search_term
+ *   search_no_results  search_term
+ *   copy               content (a label such as device_name or magicbox_url, never the copied text)
  */
 
 type Params = Record<string, string | number | undefined>;
@@ -23,9 +31,11 @@ export function track(name: string, params: Params = {}) {
   window.gtag?.("event", name, clean);
 }
 
-/** Where a search box sits, from its input id ("header-search" -> "header"). */
+/** Where a search box sits: the header, the home page, or the body of some other page (404, model index…). */
 export function searchPlacement(input: HTMLInputElement): string {
-  return input.id.replace(/-search$/, "");
+  if (input.id === "header-search") return "header";
+  if (input.id === "hero-search") return "home";
+  return "page";
 }
 
 /**

@@ -76,22 +76,30 @@ if (breadcrumbs && breadcrumbs.length > 0) {
 
     {
       /* Google tag (gtag.js). Production builds only, so local dev doesn't record visits.
-         Not loaded for automated browsers (navigator.webdriver) or a 1366x1366 screen: a headless
-         crawler with that viewport sent ~20.6k one-page sessions from Singapore on 2026-10-08. */
+         Automated browsers (navigator.webdriver, a headless user agent, or a 1366x1366 screen: a headless
+         crawler with that viewport sent ~20.6k one-page sessions from Singapore on 2026-10-08) are still
+         recorded, but tagged traffic_type=bot so a GA4 data filter can exclude them. traffic_type has to be
+         on the config call, or the page_view it sends goes out untagged. */
       import.meta.env.PROD && (
         <script
           is:inline
           set:html={`(function () {
+  // Shim first, on every code path: event calls elsewhere on the page rely on gtag existing.
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = function () { dataLayer.push(arguments); };
+
   var s = window.screen || {};
-  if (navigator.webdriver || (s.width === 1366 && s.height === 1366)) return;
+  var automated = navigator.webdriver === true ||
+                  (s.width === 1366 && s.height === 1366) ||
+                  /HeadlessChrome|Headless|Puppeteer|Playwright|PhantomJS/i.test(navigator.userAgent);
+
   var t = document.createElement('script');
   t.async = true;
   t.src = 'https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}';
   document.head.appendChild(t);
-  window.dataLayer = window.dataLayer || [];
-  window.gtag = function () { dataLayer.push(arguments); };
+
   gtag('js', new Date());
-  gtag('config', '${GA_MEASUREMENT_ID}');
+  gtag('config', '${GA_MEASUREMENT_ID}', automated ? { traffic_type: 'bot' } : {});
 })();`}
         />
       )
@@ -115,13 +123,12 @@ if (breadcrumbs && breadcrumbs.length > 0) {
 
   initClickTracking();
 
-  // Copy-to-clipboard buttons: <button data-copy="text" data-copy-kind="name|info_url|…">
+  // Copy-to-clipboard buttons: <button data-copy="text" data-copy-kind="device_name|magicbox_url|…">
   document.addEventListener("click", async (event) => {
     const button = (event.target as Element).closest<HTMLButtonElement>("[data-copy]");
     if (!button) return;
-    const kind = button.dataset.copyKind;
-    // Checksums are long and unique, so only their kind is worth recording.
-    track("copy", { content_type: kind, item_id: kind?.startsWith("checksum") ? undefined : button.dataset.copy });
+    // Only a label of what was copied: the text itself is unbounded (and could be an IP address).
+    track("copy", { content: button.dataset.copyKind });
     try {
       await navigator.clipboard.writeText(button.dataset.copy ?? "");
       const label = button.querySelector("[data-copy-label]");
