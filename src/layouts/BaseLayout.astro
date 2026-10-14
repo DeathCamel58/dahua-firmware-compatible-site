@@ -73,18 +73,25 @@ if (breadcrumbs && breadcrumbs.length > 0) {
     {structuredData.map((data) => <script type="application/ld+json" set:html={JSON.stringify(data)} />)}
 
     {
-      /* Google tag (gtag.js). Production builds only, so local dev doesn't record visits. */
+      /* Google tag (gtag.js). Production builds only, so local dev doesn't record visits.
+         Not loaded for automated browsers (navigator.webdriver) or a 1366x1366 screen: a headless
+         crawler with that viewport sent ~20.6k one-page sessions from Singapore on 2026-10-08. */
       import.meta.env.PROD && (
-        <>
-          <script is:inline async src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}></script>
-          <script
-            is:inline
-            set:html={`window.dataLayer = window.dataLayer || [];
-function gtag(){dataLayer.push(arguments);}
-gtag('js', new Date());
-gtag('config', '${GA_MEASUREMENT_ID}');`}
-          />
-        </>
+        <script
+          is:inline
+          set:html={`(function () {
+  var s = window.screen || {};
+  if (navigator.webdriver || (s.width === 1366 && s.height === 1366)) return;
+  var t = document.createElement('script');
+  t.async = true;
+  t.src = 'https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}';
+  document.head.appendChild(t);
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = function () { dataLayer.push(arguments); };
+  gtag('js', new Date());
+  gtag('config', '${GA_MEASUREMENT_ID}');
+})();`}
+        />
       )
     }
   </head>
