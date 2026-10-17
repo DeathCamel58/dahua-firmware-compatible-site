@@ -4,12 +4,15 @@
  *
  * Parameter names and values are registered in GA4 (custom dimensions, a key event), so keep them
  * exactly as they are, and keep the value sets closed:
- *   firmware_download  firmware, source (archive|wayback|vendor), placement (page|list), link_domain
+ *   firmware_download  firmware, download_source (archive|wayback|vendor), placement (page|list), link_domain
+ *
+ * Never name a parameter source, medium, campaign, term or content: GA4 reads those as the session's traffic
+ * source. A download param called source turned organic sessions into "Unassigned / archive" (Oct 2026).
  *   search             search_term, results_count (number: every match, not just those shown),
  *                      placement (header|home|search page|404|listing; kept apart from the download values)
  *   select_content     content_type (device|model|firmware|chip), item_id, search_term
  *   search_no_results  search_term
- *   copy               content (a label such as device_name or magicbox_url, never the copied text)
+ *   copy               copied_content (a label such as device_name or magicbox_url, never the copied text)
  */
 
 type Params = Record<string, string | number | undefined>;
@@ -87,7 +90,7 @@ export function initClickTracking() {
     if (link.dataset.download) {
       track("firmware_download", {
         firmware: link.dataset.download,
-        source: link.dataset.source,
+        download_source: link.dataset.source,
         placement: link.dataset.placement,
         link_domain: link.hostname,
       });

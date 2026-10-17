@@ -140,7 +140,7 @@ if (breadcrumbs && breadcrumbs.length > 0) {
     const button = (event.target as Element).closest<HTMLButtonElement>("[data-copy]");
     if (!button) return;
     // Only a label of what was copied: the text itself is unbounded (and could be an IP address).
-    track("copy", { content: button.dataset.copyKind });
+    track("copy", { copied_content: button.dataset.copyKind });
     try {
       await navigator.clipboard.writeText(button.dataset.copy ?? "");
       const label = button.querySelector("[data-copy-label]");
