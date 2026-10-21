@@ -86,6 +86,10 @@ if (breadcrumbs && breadcrumbs.length > 0) {
          sessions and 157 distinct resolutions, not one was square. The width > 0 guard matters: one
          genuine visitor reported 0x0 (screen API unavailable) and engaged normally.
 
+         1280x1200 is the one non-square exception: a Chrome/Windows crawler from Singapore that started
+         on 2026-10-15 and reached ~450 sessions/day. Every 1280x1200 session ever recorded (523 by
+         2026-10-19) was that crawler: one page, zero engagement, and no real visitor has had the size.
+
          Don't extend this to other low-engagement traffic (e.g. the China crawl or the "Unassigned"
          channel on ordinary 1920x1080 Chrome): any rule that matches a normal desktop fingerprint
          mislabels real visitors. Those need an edge or server-side answer; see section 1 of the
@@ -101,8 +105,11 @@ if (breadcrumbs && breadcrumbs.length > 0) {
   var s = window.screen || {};
   // Square screens: no real visitor has had one (see the comment in BaseLayout.astro).
   var squareViewport = s.width > 0 && s.width === s.height;
+  // The 1280x1200 Singapore crawler (see the same comment).
+  var crawlerViewport = s.width === 1280 && s.height === 1200;
   var automated = navigator.webdriver === true ||
                   squareViewport ||
+                  crawlerViewport ||
                   /HeadlessChrome|Headless|Puppeteer|Playwright|PhantomJS/i.test(navigator.userAgent);
 
   var t = document.createElement('script');
