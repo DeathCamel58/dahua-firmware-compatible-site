@@ -56,6 +56,18 @@ export function renderResultRow(
   return row;
 }
 
+/**
+ * Shown above similar-model results. Variants of one model (-S4 vs -S5) can be different hardware that
+ * needs different firmware, so this has to stop anyone treating a near match as theirs.
+ */
+export function similarNotice(className: string): HTMLParagraphElement {
+  const notice = document.createElement("p");
+  notice.className = `${className} rounded-lg border border-warn/40 bg-warn-soft text-fg`;
+  notice.textContent =
+    "No exact match. These are similar models, not yours: check the full model number and hardware version (e.g. -S4 vs -S5) on the device's label or web page before flashing anything.";
+  return notice;
+}
+
 function setupBox(form: HTMLFormElement) {
   if (form.dataset.suggest === "false") return;
   const input = form.querySelector<HTMLInputElement>('input[type="search"]')!;
@@ -92,23 +104,31 @@ function setupBox(form: HTMLFormElement) {
 
     let results: Result[];
     let total: number;
+    let similar: boolean;
     try {
-      ({ results, total } = searchWithTotal(await loadIndex(), query, MAX_SUGGESTIONS));
+      ({ results, total, similar } = searchWithTotal(await loadIndex(), query, MAX_SUGGESTIONS));
     } catch {
       return close(); // index unavailable; the form still submits to /search/
     }
     if (current !== requestId) return; // a newer keystroke won
 
+    // Similar models aren't matches, so analytics still records the search as finding nothing.
+    const exactTotal = similar ? 0 : total;
     list.replaceChildren();
-    options = results.map((result, i) => renderResultRow(result, `${input.id}-option-${i}`, query, { placement, total }));
-    if (options.length === 0) {
-      // Zero results: record the search and the miss (the user won't pick anything to trigger it).
+    options = results.map((result, i) =>
+      renderResultRow(result, `${input.id}-option-${i}`, query, { placement, total: exactTotal }),
+    );
+    if (exactTotal === 0) {
+      // No exact match: record the search and the miss (the user may not pick anything to trigger it).
       noResultsTimer = setTimeout(() => trackSearch(query, 0, placement), NO_RESULTS_DELAY);
+    }
+    if (options.length === 0) {
       const empty = document.createElement("p");
       empty.className = "px-3 py-3 text-sm text-muted";
       empty.textContent = "No matches. Try fewer characters, e.g. just the series (IPC-HDW2431).";
       list.append(empty);
     } else {
+      if (similar) list.append(similarNotice("px-3 py-2 text-xs"));
       list.append(...options);
     }
     const all = document.createElement("a");

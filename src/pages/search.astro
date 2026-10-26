@@ -25,7 +25,7 @@ import Search from "@/components/Search.astro";
 
 <script>
   import { TYPE_DEVICE, TYPE_FIRMWARE, TYPE_MODEL, TYPE_SOC, loadIndex, searchWithTotal, type EntryType } from "@/scripts/search-core";
-  import { renderResultRow } from "@/scripts/search-box";
+  import { renderResultRow, similarNotice } from "@/scripts/search-box";
   import { searchPlacement, trackSearch } from "@/scripts/analytics";
 
   const container = document.getElementById("search-results")!;
@@ -65,13 +65,14 @@ import Search from "@/components/Search.astro";
       return container.replaceChildren();
     }
 
-    let results, total;
+    let results, total, similar;
     try {
-      ({ results, total } = searchWithTotal(await loadIndex(), query, 300));
+      ({ results, total, similar } = searchWithTotal(await loadIndex(), query, 300));
     } catch {
       return message("Couldn't load the search index. Please refresh and try again.");
     }
-    trackSearchSoon(query.trim(), total, trackDelay);
+    // Similar models aren't matches, so analytics still records the search as finding nothing.
+    trackSearchSoon(query.trim(), similar ? 0 : total, trackDelay);
     if (results.length === 0) {
       return message(`No results for “${query}”. Try a shorter part of the model number, e.g. IPC-HDW2431.`);
     }
@@ -90,7 +91,7 @@ import Search from "@/components/Search.astro";
       section.append(heading, list);
       return [section];
     });
-    container.replaceChildren(...sections);
+    container.replaceChildren(...(similar ? [similarNotice("mb-6 px-4 py-3 text-sm")] : []), ...sections);
   }
 
   const initial = new URLSearchParams(location.search).get("q") ?? "";

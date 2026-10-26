@@ -126,6 +126,48 @@ function tokenPass(index: Prepared, query: string): Map<number, number> {
   return scores;
 }
 
+/** A lens code such as "0280B" or "0360": part of the order code, never part of the model. */
+const LENS_CODE = /^0\d{3}b?$/;
+/** The core model token has to be at least this long, so "s2" or "k35" alone can't pull in half the index. */
+const MIN_CORE_TOKEN = 5;
+/** Only devices and retail models are offered as similar; a firmware filename isn't a model. */
+const SIMILAR_TYPES: ReadonlySet<EntryType> = new Set([TYPE_DEVICE, TYPE_MODEL]);
+/** A firmware version ("V2.800.0000000.8.R") or filename: its tokens ("stream3") aren't model numbers. */
+const FIRMWARE_QUERY = /\d\.\d{3}\.|\.(bin|zip)\b/i;
+
+/**
+ * Third pass, used only when the token pass finds nothing either: match on the main model token alone
+ * ("HFW1230SP" in "DH-IPC-HFW1230SP-0280B"), so an order-code suffix or a variant the index doesn't
+ * list (-S4 when it has -S5) no longer sinks a model that's there. The other tokens only improve the
+ * ranking. These are similar models, not matches: -S4 and -S5 are different hardware generations and can
+ * need different firmware, so callers must say so.
+ */
+function similarPass(index: Prepared, query: string): Map<number, number> {
+  const scores = new Map<number, number>();
+  if (FIRMWARE_QUERY.test(query)) return scores;
+  const queryTokens = tokenize(query);
+  const candidates = queryTokens.filter((token) => /\d/.test(token) && /[a-z]/.test(token) && !LENS_CODE.test(token));
+  const core = candidates.reduce((longest, token) => (token.length > longest.length ? token : longest), "");
+  if (core.length < MIN_CORE_TOKEN) return scores;
+  const optional = queryTokens.filter((token) => token !== core && !LENS_CODE.test(token));
+  index.tokens ??= index.entries.map((entry) => tokenize(entry[1]));
+
+  index.tokens.forEach((nameTokens, i) => {
+    if (!SIMILAR_TYPES.has(index.entries[i][0])) return;
+    const best = (token: string) => {
+      let top = 0;
+      for (const nameToken of nameTokens) top = Math.max(top, tokenScore(token, nameToken));
+      return top;
+    };
+    const coreMatch = best(core);
+    if (coreMatch === 0) return;
+    let score = coreMatch * core.length;
+    for (const token of optional) score += best(token) * token.length;
+    scores.set(i, score * 4 - Math.min(index.normalized[i].length, 100) / 2);
+  });
+  return scores;
+}
+
 export function search(index: Prepared, query: string, limit = 10): Result[] {
   return searchWithTotal(index, query, limit).results;
 }
@@ -135,10 +177,17 @@ function toResult(index: Prepared, i: number, score: number): Result {
   return { type, name: display, href: `${TYPE_PATHS[type]}${slug}/`, meta: describe(type, meta), score: score + TYPE_BONUS[type] };
 }
 
-/** The best `limit` matches, plus how many matched in total (for analytics). */
-export function searchWithTotal(index: Prepared, query: string, limit = 10): { results: Result[]; total: number } {
+/**
+ * The best `limit` matches, plus how many matched in total (for analytics). `similar` is set when nothing
+ * matched and the results are only similar models (see similarPass); `total` then counts those.
+ */
+export function searchWithTotal(
+  index: Prepared,
+  query: string,
+  limit = 10,
+): { results: Result[]; total: number; similar: boolean } {
   const q = normalize(query);
-  if (!q) return { results: [], total: 0 };
+  if (!q) return { results: [], total: 0, similar: false };
   const tokens = query.split(/\s+/).map(normalize).filter(Boolean);
 
   const results: Result[] = [];
@@ -165,7 +214,12 @@ export function searchWithTotal(index: Prepared, query: string, limit = 10): { r
   if (results.length === 0) {
     for (const [i, score] of tokenPass(index, query)) results.push(toResult(index, i, score));
   }
+  let similar = false;
+  if (results.length === 0) {
+    for (const [i, score] of similarPass(index, query)) results.push(toResult(index, i, score));
+    similar = results.length > 0;
+  }
 
   results.sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
-  return { results: results.slice(0, limit), total: results.length };
+  return { results: results.slice(0, limit), total: results.length, similar };
 }
