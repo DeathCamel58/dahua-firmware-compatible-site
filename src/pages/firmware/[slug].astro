@@ -39,7 +39,7 @@ export const getStaticPaths = (async () => {
   for (const [alias, main] of data.aliases) add(data.aliasSlugs.get(alias)!, main, true);
   // …and so do the old Next.js URLs, which used the raw file name.
   for (const fw of data.firmwareList) {
-    for (const name of [fw.filename, ...fw.aliases]) {
+    for (const name of [fw.filename, ...fw.aliases, ...fw.truncatedAliases]) {
       const legacy = legacySegment(name, slugs);
       if (legacy) add(legacy, fw.filename, true);
     }
@@ -344,7 +344,8 @@ const checksums = [
                   )}
                   {l.aliasFilename && (
                     <p class="text-xs text-muted">
-                      Published as <code class="break-all">{l.aliasFilename}</code> (an identical file)
+                      Published as <code class="break-all">{l.aliasFilename}</code>
+                      {l.aliasTruncated ? " (a truncated copy of this file, so it isn't linked)" : " (an identical file)"}
                     </p>
                   )}
                   {models.length > 0 && (
@@ -366,7 +367,7 @@ const checksums = [
                       {[l.version, l.date && `Listed date ${formatDate(l.date)}`].filter(Boolean).join(" · ")}
                     </p>
                   )}
-                  {l.url && (
+                  {l.url && !l.aliasTruncated && (
                     <p class="mt-auto flex flex-wrap items-center gap-2 text-sm">
                       <a href={l.url} rel="nofollow noopener" class:list={[l.urlStatus === "dead" && "text-muted line-through"]}>
                         {LINK_TEXT[l.kind ?? "vendor"]} ({l.kind === "archive" ? "web.archive.org" : l.hostLabel})
@@ -469,15 +470,32 @@ const checksums = [
 
       <TechnicalDetails fw={fw} data={data} />
 
-      {fw.aliases.length > 0 && (
+      {(fw.aliases.length > 0 || fw.truncatedAliases.length > 0) && (
         <section class="mb-8" aria-labelledby="aliases-heading">
           <h2 id="aliases-heading" class="section-title">Also published as</h2>
-          <p class="mb-2 text-sm text-muted">Byte-for-byte identical files under other names:</p>
-          <ul class="space-y-1 font-mono text-sm break-all">
-            {fw.aliases.map((a) => (
-              <li>{a}</li>
-            ))}
-          </ul>
+          {fw.aliases.length > 0 && (
+            <>
+              <p class="mb-2 text-sm text-muted">Byte-for-byte identical files under other names:</p>
+              <ul class="mb-4 space-y-1 font-mono text-sm break-all">
+                {fw.aliases.map((a) => (
+                  <li>{a}</li>
+                ))}
+              </ul>
+            </>
+          )}
+          {fw.truncatedAliases.length > 0 && (
+            <>
+              <p class="mb-2 text-sm text-muted">
+                Truncated copies: only the start of this file, cut off part-way, so a device will reject them. Use the
+                download above instead.
+              </p>
+              <ul class="space-y-1 font-mono text-sm break-all">
+                {fw.truncatedAliases.map((a) => (
+                  <li>{a}</li>
+                ))}
+              </ul>
+            </>
+          )}
         </section>
       )}
 

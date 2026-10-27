@@ -139,6 +139,8 @@ export interface RawEntry {
   integrity: { status: "ok" | "truncated" | "unverified"; reason: string | null; vendorCopyTruncated: boolean } | null;
   aliases: string[];
   duplicate_of: string | null;
+  /** The start of the duplicate_of file, cut off: merged into its page but never offered or called identical. */
+  truncated_copy: boolean;
   archive_url: string | null;
   archive_item: string | null;
   /** Why archive.org declined the file (e.g. password-protected archive members), when it did. */
@@ -517,6 +519,7 @@ function readEntry(filename: string, camera: Json | undefined, compat: unknown):
         : null,
     aliases: list(c.aliases),
     duplicate_of: str(c.duplicate_of) ?? str((compat as Json | undefined)?.duplicate_of),
+    truncated_copy: c.truncated_copy === true,
     archive_url: validUrl(c.archive_url),
     archive_item: validUrl(c.archive_item),
     archive_refused: str(c.archive_refused),

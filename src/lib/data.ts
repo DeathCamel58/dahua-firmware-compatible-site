@@ -68,8 +68,10 @@ export interface Listing {
   archivedAt: string | null;
   /** Earlier addresses this page offered the file at, oldest first (for "previously at" links). */
   urlHistory: { url: string; firstSeen: string | null; lastSeen: string | null }[];
-  /** Set when this listing belongs to an identical copy published under another file name. */
+  /** Set when this listing belongs to a copy published under another file name. */
   aliasFilename: string | null;
+  /** That copy is truncated (the start of this file), so its link isn't a usable download. */
+  aliasTruncated: boolean;
 }
 
 export interface Download {
@@ -101,6 +103,8 @@ export interface Firmware {
   listingOnlyReason: string | null;
   /** Other file names with byte-identical content; their URLs redirect here. */
   aliases: string[];
+  /** Other file names holding a truncated copy (the start of this file); their URLs redirect here too. */
+  truncatedAliases: string[];
   platform: Platform | null;
   truncated: boolean;
   vendorCopyTruncated: boolean;
@@ -240,6 +244,7 @@ const BRANDS: Brand[] = (brandsJson as Record<string, unknown>[]).map((b) => ({
 }));
 
 const brandCache = new Map<string, Brand | null>();
+const GENERIC_FIRST_WORDS = new Set(["cctv", "security", "ip"]);
 
 /** Match a vendor name from the data ("ENS Security", "Speco") to its brands.json entry. */
 export function brandFor(vendor: string | null): Brand | null {
@@ -250,7 +255,8 @@ export function brandFor(vendor: string | null): Brand | null {
   const brand =
     BRANDS.find((b) => b.name.toLowerCase() === name) ??
     BRANDS.find((b) => b.slug === slugify(vendor)) ??
-    BRANDS.find((b) => b.name.toLowerCase().split(/\s+/)[0] === first) ??
+    // "Dahua India" -> Dahua, but not "CCTV App" -> CCTV Security Pros: a generic first word isn't a brand.
+    (GENERIC_FIRST_WORDS.has(first) ? undefined : BRANDS.find((b) => b.name.toLowerCase().split(/\s+/)[0] === first)) ??
     null;
   brandCache.set(vendor, brand);
   return brand;
@@ -364,7 +370,12 @@ function assignTitles(list: Firmware[]) {
   }
 }
 
-function toListing(raw: RawListing, sourceLastRun: Map<string, string>, aliasFilename: string | null): Listing {
+function toListing(
+  raw: RawListing,
+  sourceLastRun: Map<string, string>,
+  aliasFilename: string | null,
+  aliasTruncated: boolean,
+): Listing {
   return {
     vendor: raw.vendor,
     brand: brandFor(raw.vendor),
@@ -390,6 +401,7 @@ function toListing(raw: RawListing, sourceLastRun: Map<string, string>, aliasFil
     archivedAt: raw.archived_at,
     urlHistory: raw.url_history.map((h) => ({ url: h.url, firstSeen: h.first_seen, lastSeen: h.last_seen })),
     aliasFilename,
+    aliasTruncated,
   };
 }
 
@@ -405,7 +417,7 @@ function pickDownload(
   if (archiveUrl) return { url: archiveUrl, label: "Internet Archive", kind: "archive" };
   // Links checked as working first, then by kind; links known to be dead are never offered.
   const best = listings
-    .filter((l) => l.url && l.urlStatus !== "dead")
+    .filter((l) => l.url && l.urlStatus !== "dead" && !l.aliasTruncated)
     .sort(
       (a, b) =>
         Number(b.urlStatus === "ok") - Number(a.urlStatus === "ok") ||
@@ -483,7 +495,8 @@ async function buildData(): Promise<SiteData> {
     if (l.last_seen && l.last_seen > (sourceLastRun.get(l.source) ?? "")) sourceLastRun.set(l.source, l.last_seen);
   }
 
-  // Identical copies: each duplicate folds into its main entry, and its URL redirects there.
+  // Identical copies: each duplicate folds into its main entry, and its URL redirects there. Truncated
+  // copies (the start of the main file) fold in the same way, but are never offered or called identical.
   const aliases = new Map<string, string>();
   for (const e of entries) {
     if (e.duplicate_of && e.duplicate_of !== e.filename && byName.has(e.duplicate_of)) aliases.set(e.filename, e.duplicate_of);
@@ -500,9 +513,10 @@ async function buildData(): Promise<SiteData> {
 
   for (const e of mains) {
     const copies = copiesOf.get(e.filename) ?? [];
+    const copyNames = unique([...e.aliases, ...copies.map((c) => c.filename)]).filter((a) => a !== e.filename);
     const listings = [
-      ...e.listings.map((l) => toListing(l, sourceLastRun, null)),
-      ...copies.flatMap((c) => c.listings.map((l) => toListing(l, sourceLastRun, c.filename))),
+      ...e.listings.map((l) => toListing(l, sourceLastRun, null, false)),
+      ...copies.flatMap((c) => c.listings.map((l) => toListing(l, sourceLastRun, c.filename, c.truncated_copy))),
     ];
     const parsed = parseFirmwareName(e.filename);
     // Earliest vendor date = first publication. (The top-level release_date is just whichever listing
@@ -527,7 +541,8 @@ async function buildData(): Promise<SiteData> {
       listings,
       downloadable: e.downloadable,
       listingOnlyReason: e.listing_only_reason,
-      aliases: unique([...e.aliases, ...copies.map((c) => c.filename)]).filter((a) => a !== e.filename),
+      aliases: copyNames.filter((a) => !byName.get(a)?.truncated_copy),
+      truncatedAliases: copyNames.filter((a) => byName.get(a)?.truncated_copy),
       platform: e.platform,
       truncated: e.integrity?.status === "truncated" || e.analysis.truncated,
       vendorCopyTruncated: e.integrity?.vendorCopyTruncated ?? false,

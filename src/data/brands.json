@@ -609,6 +609,20 @@
     "notes": "Only logo on the site (Graphene WP theme uses a photo header); small 99x154 stacked JPEG, no larger/horizontal version found on site or Wayback. White background removed (incl. 'b' counter and the white 'i' cut-out in the circle)."
   },
   {
+    "name": "CCTV App",
+    "slug": "cctv-app",
+    "status": "reseller",
+    "statusNote": "Vietnamese KBVision and Dahua download host (files.cctvapp.net), offline since October 2026; its files come from Wayback Machine copies. A vendor in the firmware data, not in IPVM's OEM list",
+    "website": "https://cctvapp.net",
+    "logo": "logos/cctv-app.png",
+    "background": "light",
+    "width": 892,
+    "height": 196,
+    "source": "https://cctvapp.net/wp-content/uploads/2024/04/logo-cctvapp-new.png",
+    "quality": "official-raster",
+    "notes": "og:image of cctvapp.net (the main site is still up; only the files. host went offline). Transparent; trimmed the empty margin. Teal and grey artwork, needs a light tile."
+  },
+  {
     "name": "Cifra",
     "slug": "cifra",
     "status": "reseller",
@@ -676,6 +690,34 @@
     "source": "https://www.dsbolt.hu/!common_design/custom/dsbolt.unas.hu/element/layout_hu_header_logo-400x120_1_default.png?time=1649481654",
     "quality": "official-raster",
     "notes": "dsbolt.hu is the shop of Global DS Hungary Kft. (site title/og:site_name 'dsbolt - Global DS Hungary Kft.'); logo is the red 'dsbolt' wordmark, not a 'Global DS' wordmark. globalds.hu does not resolve; globalds.eu is a parked domain. Already transparent; small (220x60). The logo reads \"dsbolt\", the shop brand of Global DS Hungary Kft."
+  },
+  {
+    "name": "Goliath",
+    "slug": "goliath",
+    "status": "reseller",
+    "statusNote": "German door intercom brand (goliath-intercom.de) selling Dahua-made intercoms; its old firmware comes from Wayback Machine copies. A vendor in the firmware data, not in IPVM's OEM list",
+    "website": "https://goliath-intercom.de",
+    "logo": "logos/goliath.png",
+    "background": "light",
+    "width": 375,
+    "height": 134,
+    "source": "https://goliath-intercom.de/wp-content/uploads/2021/10/Logo_Goliath_c.png",
+    "quality": "official-raster",
+    "notes": "og:image of goliath-intercom.de. Transparent; trimmed the empty margin. Navy text with a blue ring, needs a light tile."
+  },
+  {
+    "name": "Hybrone",
+    "slug": "hybrone",
+    "status": "reseller",
+    "statusNote": "Alarm-monitoring cloud platform that publishes custom Dahua recorder builds (HttpPush) for its service. A vendor in the firmware data, not in IPVM's OEM list",
+    "website": "https://hybrone.com",
+    "logo": "logos/hybrone.svg",
+    "background": "light",
+    "width": 220,
+    "height": 49,
+    "source": "https://hybrone.com/_astro/hybrone_logo.C5B-NO5n_184yJp.svg",
+    "quality": "official-vector",
+    "notes": "Colour header SVG, already transparent. A white version (hybrone_logo_white) also exists. Navy and blue, needs a light tile."
   },
   {
     "name": "ip-phone-forum.de",
@@ -775,6 +817,20 @@
     "notes": "Only size the site offers (160x100); no vector or larger version found. Already transparent. Dark 'TECHNOLOGY' text needs a light background."
   },
   {
+    "name": "Sapsan",
+    "slug": "sapsan",
+    "status": "reseller",
+    "statusNote": "Ukrainian security installer and shop (SapSan, sapsan.org) that hosts Dahua firmware on its own pages. A vendor in the firmware data, not in IPVM's OEM list",
+    "website": "https://sapsan.org",
+    "logo": "logos/sapsan.png",
+    "background": "light",
+    "width": 357,
+    "height": 77,
+    "source": "https://sapsan.org/img/system/logo.png",
+    "quality": "official-raster",
+    "notes": "Header logo, already transparent. Cropped off the small Russian tagline under it, which is unreadable at tile size. Blue and gold artwork, needs a light tile."
+  },
+  {
     "name": "Santronic",
     "slug": "santronic",
     "status": "reseller",
@@ -857,6 +913,20 @@
     "source": "https://viatec.ua/img/header/logo.svg",
     "quality": "official-vector",
     "notes": "Header SVG; already transparent."
+  },
+  {
+    "name": "Vidimost",
+    "slug": "vidimost",
+    "status": "reseller",
+    "statusNote": "Ukrainian online security shop (VidiMost); firmware files on support.vidimost.com, found through forum links. A vendor in the firmware data, not in IPVM's OEM list",
+    "website": "https://vidimost.com",
+    "logo": "logos/vidimost.png",
+    "background": "light",
+    "width": 236,
+    "height": 62,
+    "source": "https://vidimost.com/image/catalog/Logos/logo.svg",
+    "quality": "official-raster",
+    "notes": "The header 'SVG' is only a wrapper around an embedded 236x62 PNG; that PNG was extracted unchanged. No real vector found. Black text, needs a light tile."
   },
   {
     "name": "Winco",
