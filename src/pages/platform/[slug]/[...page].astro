@@ -1,0 +1,126 @@
+---
+import type { GetStaticPaths } from "astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import Chips from "@/components/Chips.astro";
+import Pager from "@/components/Pager.astro";
+import FirmwareList from "@/components/FirmwareList.astro";
+import PageHeader from "@/components/PageHeader.astro";
+import Stats from "@/components/Stats.astro";
+import { collect, formatDate, getData, lastmodOf, paths, retailNames } from "@/lib/data";
+import { composeDescription, plural } from "@/lib/site";
+import { FIRMWARE_PAGE_SIZE, pageOf, pageParams, pageSuffix } from "@/lib/paginate";
+
+export const getStaticPaths = (async () => {
+  const data = await getData();
+  return [...data.platforms.values()].flatMap((platform) =>
+    pageParams(platform.firmwares.length, FIRMWARE_PAGE_SIZE).map(({ page, number }) => ({
+      params: { slug: platform.slug, page },
+      props: { slug: platform.slug, page: number },
+    })),
+  );
+}) satisfies GetStaticPaths;
+
+const data = await getData();
+const platform = data.platforms.get(Astro.props.slug)!;
+const firmwares = platform.firmwares.map((filename) => data.firmwares.get(filename)!);
+const devices = platform.devices.map((name) => data.devices.get(name)!);
+const list = pageOf(firmwares, Astro.props.page, FIRMWARE_PAGE_SIZE);
+const first = list.page === 1;
+const newest = firmwares.find((fw) => fw.date);
+const vendors = collect(data, platform.firmwares, (fw) => fw.vendors);
+const chips = collect(data, platform.firmwares, (fw) => fw.socs.map((s) => s.name)).map((name) => data.socs.get(name)!);
+const models = collect(data, platform.firmwares, (fw) => fw.models).map((name) => data.models.get(name)!);
+const families = [...new Map(devices.map((d) => [d.familySlug, d.family]))];
+
+const description = composeDescription([
+  first
+    ? `${platform.name} firmware for ${plural(devices.length, "device")}: ${plural(firmwares.length, "file")}${vendors.length ? ` from ${vendors.join(", ")}` : ""}`
+    : `${platform.name} firmware, page ${list.page} of ${list.pages}: files ${list.from}–${list.to} of ${list.total}`,
+  { lead: "Devices include", items: devices.map((d) => d.name) },
+  newest && (newest.version ? `Newest ${newest.version} (${formatDate(newest.date)})` : `Updated ${formatDate(newest.date)}`),
+  { lead: "Same hardware sold as", items: retailNames(firmwares) },
+]);
+const site = Astro.site!;
+const jsonLd = [
+  {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: `${platform.label} firmware`,
+    numberOfItems: list.total,
+    itemListElement: list.items.map((fw, i) => ({
+      "@type": "ListItem",
+      position: list.from + i,
+      url: new URL(paths.firmware(fw), site).href,
+      name: fw.title,
+    })),
+  },
+];
+---
+
+<BaseLayout
+  title={`${platform.label} firmware (${plural(devices.length, "device")})${pageSuffix(list.page, list.pages)}`}
+  description={description}
+  jsonLd={jsonLd}
+  lastmod={lastmodOf(list.items)}
+  breadcrumbs={[
+    { name: "Home", href: "/" },
+    { name: "Platforms", href: "/platform/" },
+    first ? { name: platform.label } : { name: platform.label, href: paths.platform(platform) },
+    ...(first ? [] : [{ name: `Page ${list.page}` }]),
+  ]}
+>
+  <PageHeader eyebrow="Firmware platform" title={platform.label} mono>
+    <p class="mt-3 max-w-3xl text-muted">
+      {plural(devices.length, "device")} list exactly the same {plural(firmwares.length, "firmware file")}, so they're
+      collected here. Most of the files are named for the <strong class="text-fg">{platform.name}</strong> platform. Each
+      device's own page shows its newest files. Even on a shared platform, confirm your device's <code>updateSerial</code>{" "}
+      before flashing.
+    </p>
+  </PageHeader>
+
+  {first && (<Stats
+    stats={[
+      { label: "Firmware files", value: firmwares.length },
+      { label: "Devices", value: devices.length },
+      { label: "Newest", value: formatDate(newest?.date ?? null) },
+      { label: "Vendors", value: vendors.join(", ") || null },
+      { label: "Chip", value: chips.map((c) => c.name).join(", ") || null },
+    ]}
+  />)}
+
+  {
+    first && (
+      <section class="mb-8" aria-labelledby="devices-heading">
+        <h2 id="devices-heading" class="section-title">Devices on this platform</h2>
+        <p class="mb-3 text-sm text-muted">
+          From the {families.map(([slug, name], i) => (
+            <>{i > 0 && (i === families.length - 1 ? " and " : ", ")}<a href={paths.family({ slug })}>{name}</a></>
+          ))} {families.length === 1 ? "family" : "families"}.
+        </p>
+        <Chips items={devices.map((d) => ({ name: d.name, href: paths.device(d) }))} />
+      </section>
+    )
+  }
+
+  <section class="mb-8" aria-labelledby="firmware-heading">
+    <h2 id="firmware-heading" class="section-title">Firmware</h2>
+    {list.pages > 1 && (
+      <p class="mb-3 text-sm text-muted">Showing {list.from}–{list.to} of {list.total.toLocaleString("en-US")}, newest first.</p>
+    )}
+    <FirmwareList firmwares={list.items} />
+    <Pager page={list.page} pages={list.pages} base={paths.platform(platform)} />
+    <p class="mt-3 text-sm text-muted">
+      Compatibility is detected automatically from firmware files and may be incomplete or wrong. Always confirm your
+      device's <code>updateSerial</code> first.
+    </p>
+  </section>
+
+  {
+    first && models.length > 0 && (
+      <section aria-labelledby="models-heading">
+        <h2 id="models-heading" class="section-title">Retail models using the same firmware</h2>
+        <Chips items={models.map((m) => ({ name: m.name, href: paths.model(m) }))} />
+      </section>
+    )
+  }
+</BaseLayout>

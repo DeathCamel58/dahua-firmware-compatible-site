@@ -27,6 +27,14 @@ export const TRACKING_START = "2026-10-02";
 /** Families with fewer devices than this are folded into "Other". */
 const MIN_FAMILY_SIZE = 3;
 
+/**
+ * Devices that list exactly the same firmware files share one platform page when there are at least this
+ * many of them, and the list is at least PLATFORM_MIN_FIRMWARES long. Their own pages then show only the
+ * newest files: dozens of device pages carrying the same long list read as duplicates to search engines.
+ */
+const PLATFORM_MIN_DEVICES = 3;
+const PLATFORM_MIN_FIRMWARES = 10;
+
 // ---------------------------------------------------------------------------------------------
 // Types
 
@@ -158,6 +166,21 @@ export interface Device {
   familySlug: string;
   /** Firmware filenames, newest first. */
   firmwares: string[];
+  /** Slug of the shared platform page holding this device's full list, if it has one. */
+  platformSlug: string | null;
+}
+
+/** Devices whose firmware lists are identical (see PLATFORM_MIN_DEVICES), listed on one page. */
+export interface DevicePlatform {
+  slug: string;
+  /** Most common platform name in the files' names, e.g. "IPC-HX5X3X-Rhea"; not unique on its own. */
+  name: string;
+  /** `name`, plus the first device when other platforms share the name. Unique. */
+  label: string;
+  /** Device names, sorted. */
+  devices: string[];
+  /** Firmware filenames, newest first (every member device's list). */
+  firmwares: string[];
 }
 
 export interface RetailModel {
@@ -197,6 +220,8 @@ export interface Vendor {
 export interface SiteData {
   firmwares: Map<string, Firmware>;
   devices: Map<string, Device>;
+  /** Platform slug -> shared platform page data. */
+  platforms: Map<string, DevicePlatform>;
   models: Map<string, RetailModel>;
   families: Map<string, Family>;
   vendors: Map<string, Vendor>;
@@ -657,8 +682,10 @@ async function buildData(): Promise<SiteData> {
       family: family.name,
       familySlug: family.slug,
       firmwares: fws,
+      platformSlug: null,
     });
   }
+  const platforms = buildPlatforms(devices, firmwares);
 
   const modelSlugs = assignSlugs(modelFirmwares.keys(), ["brand"]);
   const models = new Map<string, RetailModel>();
@@ -713,7 +740,51 @@ async function buildData(): Promise<SiteData> {
 
   const aliasSlugs = new Map([...aliases.keys()].map((alias) => [alias, firmwareSlugs.get(alias)!]));
 
-  return { firmwares, devices, models, families, vendors, socs, aliases, aliasSlugs, hwids, firmwareList, latestRun };
+  return { firmwares, devices, platforms, models, families, vendors, socs, aliases, aliasSlugs, hwids, firmwareList, latestRun };
+}
+
+/** Group devices with identical firmware lists into platforms, and point each member at its platform. */
+function buildPlatforms(devices: Map<string, Device>, firmwares: Map<string, Firmware>): Map<string, DevicePlatform> {
+  const groups = new Map<string, Device[]>();
+  for (const device of devices.values()) {
+    if (device.firmwares.length < PLATFORM_MIN_FIRMWARES) continue;
+    const key = device.firmwares.join("\n");
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(device);
+  }
+  const found = [...groups.values()]
+    .filter((members) => members.length >= PLATFORM_MIN_DEVICES)
+    .map((members) => {
+      const counts = new Map<string, number>();
+      for (const filename of members[0].firmwares) {
+        const model = firmwares.get(filename)!.model;
+        if (model) counts.set(model, (counts.get(model) ?? 0) + 1);
+      }
+      const top = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0];
+      // devices is filled in name order, so members[0] is the alphabetically first device.
+      return { name: top ?? `${members[0].name} platform`, members };
+    });
+
+  // Several platforms can share a name (four "IPC-HX5X3X-Rhea" lists differ by a few files). Those get the
+  // first device in their label and slug, which keeps each URL stable when another group appears or goes.
+  const nameCount = new Map<string, number>();
+  for (const { name } of found) nameCount.set(name, (nameCount.get(name) ?? 0) + 1);
+  const platforms = new Map<string, DevicePlatform>();
+  for (const { name, members } of found.sort((a, b) => a.name.localeCompare(b.name) || a.members[0].name.localeCompare(b.members[0].name))) {
+    const shared = nameCount.get(name)! > 1;
+    const base = slugify(shared ? `${name}-${members[0].name}` : name);
+    let slug = base;
+    for (let i = 2; platforms.has(slug); i++) slug = `${base}-${i}`;
+    platforms.set(slug, {
+      slug,
+      name,
+      label: shared ? `${name} (${members[0].name} and similar)` : name,
+      devices: members.map((d) => d.name),
+      firmwares: members[0].firmwares,
+    });
+    for (const device of members) device.platformSlug = slug;
+  }
+  return platforms;
 }
 
 let cached: Promise<SiteData> | undefined;
@@ -799,6 +870,7 @@ export const paths = {
   firmware: (fw: Pick<Firmware, "slug">) => `/firmware/${fw.slug}/`,
   device: (d: Pick<Device, "slug">) => `/device/${d.slug}/`,
   family: (f: Pick<Family, "slug">) => `/device/family/${f.slug}/`,
+  platform: (p: Pick<DevicePlatform, "slug">) => `/platform/${p.slug}/`,
   model: (m: Pick<RetailModel, "slug">) => `/model/${m.slug}/`,
   modelBrand: (v: Pick<Vendor, "slug">) => `/model/brand/${v.slug}/`,
   modelSeries: (v: Pick<Vendor, "slug">, g: Pick<NameGroup, "slug">) => `/model/brand/${v.slug}/${g.slug}/`,

@@ -6,7 +6,7 @@ import { readFile, readdir, unlink, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
 /** Child sitemaps, by first path segment; pages outside these sections go in the last one. */
-const SITEMAP_SECTIONS = ["device", "model", "firmware", "vendor", "soc"];
+const SITEMAP_SECTIONS = ["device", "platform", "model", "firmware", "vendor", "soc"];
 
 /**
  * Post-processes @astrojs/sitemap's output:
