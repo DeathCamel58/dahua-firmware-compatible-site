@@ -29,7 +29,7 @@ const rendered = await Promise.all(entries.map(async (entry) => ({ entry, Conten
     ) : (
       <ol class="relative space-y-6 border-l border-border pl-6">
         {rendered.map(({ entry, Content }) => (
-          <li id={changelogAnchor(entry)} class="scroll-mt-24">
+          <li id={changelogAnchor(entry)} class="scroll-mt-32">
             <span class="absolute -left-[5px] mt-2 h-2.5 w-2.5 rounded-full bg-accent" aria-hidden="true" />
             <article class="card p-5">
               <header class="flex flex-wrap items-center gap-x-3 gap-y-1">

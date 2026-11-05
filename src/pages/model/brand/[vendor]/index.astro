@@ -75,7 +75,7 @@ const firmwares = vendor.firmwares.map((f) => data.firmwares.get(f)!);
         )}
         <div class="space-y-8">
           {series.map((s) => (
-            <section id={`series-${s.slug}`} aria-labelledby={`series-${s.slug}-h`} class="scroll-mt-24">
+            <section id={`series-${s.slug}`} aria-labelledby={`series-${s.slug}-h`} class="scroll-mt-32">
               <h2 id={`series-${s.slug}-h`} class="section-title font-mono">
                 {s.name} <span class="text-sm font-normal text-muted">({s.items.length})</span>
               </h2>

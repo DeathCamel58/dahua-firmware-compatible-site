@@ -54,7 +54,7 @@ const firmwareCount = new Set(socs.flatMap((s) => s.firmwares)).size;
         </nav>
         <div class="space-y-8">
           {sorted.map(([vendor, list]) => (
-            <section id={anchor(vendor)} aria-labelledby={`${anchor(vendor)}-h`} class="scroll-mt-24">
+            <section id={anchor(vendor)} aria-labelledby={`${anchor(vendor)}-h`} class="scroll-mt-32">
               <h2 id={`${anchor(vendor)}-h`} class="section-title">
                 {vendor} <span class="text-sm font-normal text-muted">({plural(list.length, "chip")})</span>
               </h2>
