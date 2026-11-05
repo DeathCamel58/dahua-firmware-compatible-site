@@ -172,6 +172,54 @@ export function search(index: Prepared, query: string, limit = 10): Result[] {
   return searchWithTotal(index, query, limit).results;
 }
 
+/**
+ * Dahua's sale names add a P to the model token for the PAL version ("IPC-HDW5830RP-Z", "IPC-HDBW3441EP-S"), but
+ * the device IDs inside the firmware usually leave it out ("IPC-HDW5830R-Z"). Only a P after a letter that follows
+ * the model number counts, so "NVR4108-8P" (eight PoE ports) is left alone.
+ */
+const PAL_SUFFIX = /(?<![a-z0-9])([a-z]+\d+[a-z]*[a-z])p(?![a-z0-9])/g;
+/** The P-less spelling of a query with a PAL sale name, or undefined when it has none. */
+function withoutPal(query: string): string | undefined {
+  const stripped = query.toLowerCase().replace(PAL_SUFFIX, "$1");
+  return stripped === query.toLowerCase() ? undefined : stripped;
+}
+/** Ranks a match on the P-less spelling just under the same match as typed. */
+const PAL_PENALTY = 50;
+
+/** A hardware generation suffix: "-S2", "-S3". A later generation is different hardware and can need different firmware. */
+const GENERATION = /^s\d$/;
+/** Ranks "IPC-HFW2431T-ZS-S2" under "IPC-HFW2431T-ZS-2713" (a lens variant of the same camera) for "IPC-HFW2431T-ZS". */
+const GENERATION_PENALTY = 30;
+
+/** Exact, prefix and substring matches of the query as typed (separators ignored); a score per matching entry. */
+function directPass(index: Prepared, query: string): Map<number, number> {
+  const scores = new Map<number, number>();
+  const q = normalize(query);
+  if (!q) return scores;
+  const tokens = query.split(/\s+/).map(normalize).filter(Boolean);
+  index.normalized.forEach((name, i) => {
+    if (name === q) {
+      scores.set(i, 1000);
+    } else if (name.startsWith(q)) {
+      scores.set(i, 800 - Math.min(name.length - q.length, 200));
+    } else {
+      const position = name.indexOf(q);
+      if (position >= 0) {
+        scores.set(i, 500 - Math.min(position, 100) - Math.min(name.length, 100) / 2);
+      } else if (tokens.length > 1 && tokens.every((token) => name.includes(token))) {
+        scores.set(i, 250 - Math.min(name.length, 100) / 2);
+      }
+    }
+  });
+  return scores;
+}
+
+/** Ranks a name lower when it has a generation suffix the query didn't ask for. */
+function generationPenalty(index: Prepared, i: number, queryTokens: string[]): number {
+  const unasked = tokenize(index.entries[i][1]).some((token) => GENERATION.test(token) && !queryTokens.includes(token));
+  return unasked ? GENERATION_PENALTY : 0;
+}
+
 function toResult(index: Prepared, i: number, score: number): Result {
   const [type, display, slug, meta] = index.entries[i];
   return { type, name: display, href: `${TYPE_PATHS[type]}${slug}/`, meta: describe(type, meta), score: score + TYPE_BONUS[type] };
@@ -186,39 +234,29 @@ export function searchWithTotal(
   query: string,
   limit = 10,
 ): { results: Result[]; total: number; similar: boolean } {
-  const q = normalize(query);
-  if (!q) return { results: [], total: 0, similar: false };
-  const tokens = query.split(/\s+/).map(normalize).filter(Boolean);
+  if (!normalize(query)) return { results: [], total: 0, similar: false };
+  const queryTokens = tokenize(query);
+  const pal = withoutPal(query);
 
-  const results: Result[] = [];
-  index.normalized.forEach((name, i) => {
-    let score: number;
-    if (name === q) {
-      score = 1000;
-    } else if (name.startsWith(q)) {
-      score = 800 - Math.min(name.length - q.length, 200);
-    } else {
-      const position = name.indexOf(q);
-      if (position >= 0) {
-        score = 500 - Math.min(position, 100) - Math.min(name.length, 100) / 2;
-      } else if (tokens.length > 1 && tokens.every((token) => name.includes(token))) {
-        score = 250 - Math.min(name.length, 100) / 2;
-      } else {
-        return;
-      }
+  const scores = directPass(index, query);
+  // A PAL sale name also finds the P-less device ID: "IPC-HDW5830RP-Z" finds "IPC-HDW5830R-Z", not only "...RP-Z-S2".
+  if (pal) {
+    for (const [i, score] of directPass(index, pal)) {
+      scores.set(i, Math.max(scores.get(i) ?? -Infinity, score - PAL_PENALTY));
     }
-    results.push(toResult(index, i, score));
-  });
+  }
   // Nothing matched as typed: try token by token. Only then, so a query that already finds its model
   // ("DH-XVR51") isn't flooded with every model that merely shares part of it.
-  if (results.length === 0) {
-    for (const [i, score] of tokenPass(index, query)) results.push(toResult(index, i, score));
+  if (scores.size === 0) {
+    for (const [i, score] of tokenPass(index, query)) scores.set(i, score);
   }
   let similar = false;
-  if (results.length === 0) {
-    for (const [i, score] of similarPass(index, query)) results.push(toResult(index, i, score));
-    similar = results.length > 0;
+  if (scores.size === 0) {
+    for (const [i, score] of similarPass(index, query)) scores.set(i, score);
+    similar = scores.size > 0;
   }
+
+  const results = [...scores].map(([i, score]) => toResult(index, i, score - generationPenalty(index, i, queryTokens)));
 
   results.sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
   return { results: results.slice(0, limit), total: results.length, similar };
