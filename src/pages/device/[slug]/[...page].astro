@@ -4,10 +4,11 @@ import BaseLayout from "@/layouts/BaseLayout.astro";
 import Chips from "@/components/Chips.astro";
 import Pager from "@/components/Pager.astro";
 import FirmwareList from "@/components/FirmwareList.astro";
+import HardwareBox from "@/components/HardwareBox.astro";
 import PageHeader from "@/components/PageHeader.astro";
 import Stats from "@/components/Stats.astro";
 import Redirect from "@/components/Redirect.astro";
-import { collect, deviceCategory, formatDate, getData, lastmodOf, paths, retailNames, similarDevices } from "@/lib/data";
+import { collect, deviceCategory, deviceHardware, formatDate, getData, lastmodOf, paths, retailNames, similarDevices } from "@/lib/data";
 import { composeDescription, plural } from "@/lib/site";
 import { FIRMWARE_PAGE_SIZE, pageOf, pageParams, pageSuffix, pageUrl } from "@/lib/paginate";
 
@@ -40,6 +41,7 @@ const newest = firmwares.find((fw) => fw.date);
 const vendors = collect(data, device.firmwares, (fw) => fw.vendors);
 const chips = collect(data, device.firmwares, (fw) => fw.socs.map((s) => s.name)).map((name) => data.socs.get(name)!);
 const similar = similarDevices(data, device);
+const hardware = first ? deviceHardware(data, device) : null;
 const models = collect(data, device.firmwares, (fw) => fw.models)
   .slice(0, 24)
   .map((name) => data.models.get(name)!);
@@ -125,6 +127,7 @@ const jsonLd = [
     ]}
   />)}
 
+  {hardware && <HardwareBox hardware={hardware} deviceName={device.name} />}
 
   <section class="mb-8" aria-labelledby="firmware-heading">
     <h2 id="firmware-heading" class="section-title">{platform ? "Newest compatible firmware" : "Compatible firmware"}</h2>

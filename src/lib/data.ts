@@ -17,6 +17,7 @@ import {
   type RawListing,
   type UrlStatus,
 } from "./raw";
+import { hardwareRows, variantKey, type HardwareRow } from "./hwid";
 import { assignSlugs, slugify } from "./slug";
 
 const DATA_BASE = "https://raw.githubusercontent.com/DeathCamel58/amcrest-compatible-finder/master";
@@ -827,6 +828,45 @@ export function similarDevices(data: SiteData, device: Device, limit = 12): Devi
     .sort((a, b) => b.score - a.score || a.device.name.localeCompare(b.device.name))
     .slice(0, limit)
     .map((entry) => entry.device);
+}
+
+/** A device's hardware, decoded from the hardware-ID lines its firmwares carry. */
+export interface DeviceHardware {
+  /** The newest firmware's hardware, as labelled rows. */
+  rows: HardwareRow[];
+  /** The full hardware-ID line behind it, for the raw disclosure. */
+  raw: string;
+  /** Title of the firmware the shown variant came from. */
+  from: string;
+  /** How many other distinct hardware revisions appear across this device's other firmwares. */
+  otherVariants: number;
+}
+
+/**
+ * Decode a device's hardware from the `MODEL:f1:f2:…` lines its firmwares declare (schemaVersion 2+).
+ * The newest firmware's line wins; revisions that differ on a shown field are counted as other variants.
+ * Board-family placeholders (IPC-HX3XXX) have no concrete line and return null. SoC is taken from the
+ * firmware's boot/kernel when known, which is more reliable than the line's field 5.
+ */
+export function deviceHardware(data: SiteData, device: Device): DeviceHardware | null {
+  if (device.kind !== "model") return null;
+  const variants = new Set<string>();
+  let primary: { rows: HardwareRow[]; raw: string; from: string } | null = null;
+  for (const filename of device.firmwares) {
+    const fw = data.firmwares.get(filename);
+    if (!fw) continue;
+    const soc = fw.socs.map((s) => s.name).join(", ") || undefined;
+    for (const src of fw.hardwareSources) {
+      for (const line of src.lines) {
+        if (line.model !== device.name) continue;
+        const rows = hardwareRows(line.decoded, soc);
+        if (rows.length === 0) continue;
+        variants.add(variantKey(line.decoded, soc));
+        if (!primary) primary = { rows, raw: line.raw, from: fw.title };
+      }
+    }
+  }
+  return primary ? { ...primary, otherVariants: variants.size - 1 } : null;
 }
 
 /** Unique values across a list of firmwares, preserving first-seen order. */

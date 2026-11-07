@@ -1,0 +1,53 @@
+---
+import type { DeviceHardware } from "@/lib/data";
+
+interface Props {
+  hardware: DeviceHardware;
+  deviceName: string;
+}
+
+const { hardware, deviceName } = Astro.props;
+---
+
+<section class="mb-8" aria-labelledby="hardware-heading">
+  <h2 id="hardware-heading" class="section-title">Hardware</h2>
+  <div class="card p-5 sm:p-6">
+    <dl class="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3 lg:grid-cols-4">
+      {
+        hardware.rows.map((row) => (
+          <div>
+            <dt class="text-xs text-muted">{row.label}</dt>
+            <dd class="mt-0.5 text-sm font-semibold text-fg">{row.value}</dd>
+          </div>
+        ))
+      }
+    </dl>
+
+    <p class="mt-5 text-xs text-muted">
+      Read from the firmware's hardware-ID list{hardware.otherVariants > 0 && (
+        <>
+          {" "}({hardware.from}).{" "}
+          {hardware.otherVariants === 1
+            ? "Another firmware declares a different hardware revision of this device."
+            : `Other firmwares declare ${hardware.otherVariants} different hardware revisions of this device.`}
+        </>
+      )}{hardware.otherVariants === 0 && ". It describes the hardware the firmware expects, not a confirmed spec."}
+    </p>
+
+    <details class="mt-3 text-xs">
+      <summary class="cursor-pointer text-muted hover:text-fg">Raw hardware ID</summary>
+      <div class="mt-2 flex items-start gap-2 rounded-md bg-surface-2 p-2">
+        <code class="min-w-0 flex-1 break-all">{hardware.raw}</code>
+        <button
+          type="button"
+          data-copy={hardware.raw}
+          data-copy-kind="hwid_line"
+          class="btn-ghost shrink-0 px-2 py-1"
+          aria-label={`Copy ${deviceName} hardware ID`}
+        >
+          <span data-copy-label>Copy</span>
+        </button>
+      </div>
+    </details>
+  </div>
+</section>

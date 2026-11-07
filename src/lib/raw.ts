@@ -22,6 +22,41 @@ export interface Hardware {
   ignored: string[];
 }
 
+/** A single mapped hardware-ID field: Dahua's raw code, plus the name its table gives it (null if unmapped). */
+export interface HwCode {
+  code: string;
+  name: string | null;
+}
+
+/** The hardware a decoded hardware-ID line describes. Each field is present only when the pipeline rates it reliable. */
+export interface HwDecoded {
+  category?: HwCode;
+  formFactor?: HwCode;
+  sensor?: HwCode;
+  soc?: HwCode;
+  videoChannels?: number;
+  audioIn?: boolean;
+  audioOut?: boolean;
+  microSD?: boolean;
+  /** CPU clocks in MHz, one per core/cluster. */
+  cpuMhz?: number[];
+  wifi?: boolean;
+  videoOut?: HwCode;
+  ramMiB?: number;
+}
+
+/** One decoded hardware-ID line (detail schemaVersion 2+): a device the firmware accepts, with its hardware. */
+export interface HwLine {
+  /** Field 0: the device ID this line describes. */
+  model: string;
+  /** The full `MODEL:f1:f2:…` line, for the raw disclosure. */
+  raw: string;
+  /** Field 1 (HWID_VERSION); null when it isn't the 01 camera layout. */
+  layout: number | null;
+  fieldCount: number;
+  decoded: HwDecoded;
+}
+
 /** Where a set of hardware IDs was read from inside the firmware (extractor v5+). */
 export interface HardwareSource {
   /** hwid | check_img | install | install_lua | uboot */
@@ -35,6 +70,8 @@ export interface HardwareSource {
   counted: boolean;
   /** Install's Vendor. */
   vendor: string | null;
+  /** Decoded hardware-ID lines (schemaVersion 2+; empty for hwid/check_img/folder sources on older data). */
+  lines: HwLine[];
 }
 
 export interface Partition {
@@ -275,6 +312,35 @@ const num = (value: unknown): number | null => (typeof value === "number" && Num
 const bool = (value: unknown): boolean | null => (typeof value === "boolean" ? value : null);
 const obj = (value: unknown): Json | null => (value && typeof value === "object" && !Array.isArray(value) ? (value as Json) : null);
 
+function readHwCode(value: unknown): HwCode | undefined {
+  const o = obj(value);
+  const code = o ? str(o.code) : null;
+  return code ? { code, name: o ? str(o.name) : null } : undefined;
+}
+
+function readHwLine(l: Json): HwLine | null {
+  const model = str(l.model);
+  const raw = str(l.raw);
+  if (!model || !raw) return null;
+  const d = obj(l.decoded) ?? {};
+  const decoded: HwDecoded = {};
+  for (const key of ["category", "formFactor", "sensor", "soc", "videoOut"] as const) {
+    const code = readHwCode(d[key]);
+    if (code) decoded[key] = code;
+  }
+  for (const key of ["videoChannels", "ramMiB"] as const) {
+    const n = num(d[key]);
+    if (n !== null) decoded[key] = n;
+  }
+  for (const key of ["audioIn", "audioOut", "microSD", "wifi"] as const) {
+    const b = bool(d[key]);
+    if (b !== null) decoded[key] = b;
+  }
+  const cpu = Array.isArray(d.cpuMhz) ? d.cpuMhz.map(num).filter((n): n is number => n !== null) : [];
+  if (cpu.length) decoded.cpuMhz = cpu;
+  return { model, raw, layout: num(l.layout), fieldCount: num(l.fieldCount) ?? 0, decoded };
+}
+
 function readHardwareSource(s: Json): HardwareSource {
   return {
     source: str(s.source) ?? "unknown",
@@ -283,6 +349,7 @@ function readHardwareSource(s: Json): HardwareSource {
     ids: list(s.ids),
     counted: s.counted === true,
     vendor: str(s.vendor),
+    lines: Array.isArray(s.lines) ? (s.lines as Json[]).map(readHwLine).filter((x): x is HwLine => x !== null) : [],
   };
 }
 
