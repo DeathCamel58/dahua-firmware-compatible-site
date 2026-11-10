@@ -1,5 +1,6 @@
 ---
 import type { DeviceHardware } from "@/lib/data";
+import OpenIpcNotice from "@/components/OpenIpcNotice.astro";
 
 interface Props {
   hardware: DeviceHardware;
@@ -49,5 +50,8 @@ const { hardware, deviceName } = Astro.props;
         </button>
       </div>
     </details>
+  </div>
+  <div class="mt-3">
+    <OpenIpcNotice />
   </div>
 </section>
