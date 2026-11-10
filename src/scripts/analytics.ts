@@ -11,7 +11,8 @@
  *   search             search_term, results_count (number: every match, not just those shown),
  *                      placement (header|home|search page|404|listing; kept apart from the download values)
  *   select_content     content_type (device|model|firmware|chip), item_id, search_term
- *   search_no_results  search_term
+ *   search_no_results  search_term (nothing matched, not even a similar model)
+ *   search_similar     search_term (no exact match, only similar models were offered; results_count on its search is 0)
  *   openipc_click      openipc_link (get_started|report), placement (firmware page|device page), link_domain
  *   copy               copied_content (a label such as device_name or magicbox_url, never the copied text)
  */
@@ -60,11 +61,11 @@ const DEDUPE_MS = 10_000;
 
 /**
  * A search that was run: always `search` (zero results included), plus `search_no_results` when nothing
- * matched. A no-match query in a search box is recorded after a pause; if the user then presses Enter, the
+ * matched, or `search_similar` when only similar models were offered. A no-match query in a search box is recorded after a pause; if the user then presses Enter, the
  * /search/ page runs the same term again, so a repeat within DEDUPE_MS is dropped. That survives the page
  * change because it's kept in sessionStorage.
  */
-export function trackSearch(searchTerm: string, resultsCount: number, placement: string) {
+export function trackSearch(searchTerm: string, resultsCount: number, placement: string, similar = false) {
   const now = Date.now();
   try {
     const previous = JSON.parse(sessionStorage.getItem(DEDUPE_KEY) || "null");
@@ -74,7 +75,7 @@ export function trackSearch(searchTerm: string, resultsCount: number, placement:
     // Storage unavailable (private mode, blocked): count it anyway.
   }
   track("search", { search_term: searchTerm, results_count: resultsCount, placement });
-  if (resultsCount === 0) track("search_no_results", { search_term: searchTerm });
+  if (resultsCount === 0) track(similar ? "search_similar" : "search_no_results", { search_term: searchTerm });
 }
 
 /**
@@ -114,7 +115,7 @@ export function initClickTracking() {
 export function trackSelect(row: HTMLAnchorElement) {
   // Picking a suggestion skips the search page, so the search itself is recorded here.
   const placement = row.dataset.searchPlacement;
-  if (placement) trackSearch(row.dataset.searchTerm ?? "", Number(row.dataset.resultsCount), placement);
+  if (placement) trackSearch(row.dataset.searchTerm ?? "", Number(row.dataset.resultsCount), placement, row.dataset.resultsSimilar === "1");
   track("select_content", {
     content_type: row.dataset.resultType,
     item_id: row.dataset.resultName,

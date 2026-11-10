@@ -49,12 +49,12 @@ import Search from "@/components/Search.astro";
   let trackTimer: ReturnType<typeof setTimeout>;
   let lastTracked = "";
 
-  function trackSearchSoon(query: string, total: number, delay: number) {
+  function trackSearchSoon(query: string, total: number, similar: boolean, delay: number) {
     clearTimeout(trackTimer);
     trackTimer = setTimeout(() => {
       if (query === lastTracked) return;
       lastTracked = query;
-      trackSearch(query, total, searchPlacement(input));
+      trackSearch(query, total, searchPlacement(input), similar);
     }, delay);
   }
 
@@ -71,8 +71,8 @@ import Search from "@/components/Search.astro";
     } catch {
       return message("Couldn't load the search index. Please refresh and try again.");
     }
-    // Similar models aren't matches, so analytics still records the search as finding nothing.
-    trackSearchSoon(query.trim(), similar ? 0 : total, trackDelay);
+    // Similar models aren't matches: analytics records zero results, flagged as similar.
+    trackSearchSoon(query.trim(), similar ? 0 : total, similar, trackDelay);
     if (results.length === 0) {
       return message(`No results for “${query}”. Try a shorter part of the model number, e.g. IPC-HDW2431.`);
     }

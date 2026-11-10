@@ -16,7 +16,7 @@ export function renderResultRow(
   result: Result,
   id?: string,
   query?: string,
-  search?: { placement: string; total: number },
+  search?: { placement: string; total: number; similar: boolean },
 ): HTMLAnchorElement {
   const row = document.createElement("a");
   row.href = result.href;
@@ -26,6 +26,7 @@ export function renderResultRow(
   if (search) {
     row.dataset.searchPlacement = search.placement;
     row.dataset.resultsCount = String(search.total);
+    if (search.similar) row.dataset.resultsSimilar = "1";
   }
   row.className =
     "flex items-center gap-3 rounded-lg px-3 py-2 text-fg no-underline hover:bg-surface-2 hover:no-underline aria-selected:bg-accent-soft";
@@ -112,15 +113,15 @@ function setupBox(form: HTMLFormElement) {
     }
     if (current !== requestId) return; // a newer keystroke won
 
-    // Similar models aren't matches, so analytics still records the search as finding nothing.
+    // Similar models aren't matches: analytics records zero results, flagged as similar.
     const exactTotal = similar ? 0 : total;
     list.replaceChildren();
     options = results.map((result, i) =>
-      renderResultRow(result, `${input.id}-option-${i}`, query, { placement, total: exactTotal }),
+      renderResultRow(result, `${input.id}-option-${i}`, query, { placement, total: exactTotal, similar }),
     );
     if (exactTotal === 0) {
       // No exact match: record the search and the miss (the user may not pick anything to trigger it).
-      noResultsTimer = setTimeout(() => trackSearch(query, 0, placement), NO_RESULTS_DELAY);
+      noResultsTimer = setTimeout(() => trackSearch(query, 0, placement, similar), NO_RESULTS_DELAY);
     }
     if (options.length === 0) {
       const empty = document.createElement("p");

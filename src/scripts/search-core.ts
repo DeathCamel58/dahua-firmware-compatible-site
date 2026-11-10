@@ -214,6 +214,34 @@ function directPass(index: Prepared, query: string): Map<number, number> {
   return scores;
 }
 
+/**
+ * The query without its lens codes ("DH-IPC-HFW1230SP-0280B" -> "dh-ipc-hfw1230sp"), or undefined when it has none
+ * or nothing but one. A lens code picks the lens of a retail order code; the firmware's device ID never has it.
+ */
+function withoutLens(query: string): string | undefined {
+  const tokens = tokenize(query);
+  const kept = tokens.filter((token) => !LENS_CODE.test(token));
+  return kept.length < tokens.length && kept.some((token) => /\d/.test(token)) ? kept.join("-") : undefined;
+}
+
+/** Matches of the query as typed (and its PAL spelling), then token by token; empty when it matches nothing. */
+function exactScores(index: Prepared, query: string): Map<number, number> {
+  const pal = withoutPal(query);
+  const scores = directPass(index, query);
+  // A PAL sale name also finds the P-less device ID: "IPC-HDW5830RP-Z" finds "IPC-HDW5830R-Z", not only "...RP-Z-S2".
+  if (pal) {
+    for (const [i, score] of directPass(index, pal)) {
+      scores.set(i, Math.max(scores.get(i) ?? -Infinity, score - PAL_PENALTY));
+    }
+  }
+  // Nothing matched as typed: try token by token. Only then, so a query that already finds its model
+  // ("DH-XVR51") isn't flooded with every model that merely shares part of it.
+  if (scores.size === 0) {
+    for (const [i, score] of tokenPass(index, query)) scores.set(i, score);
+  }
+  return scores;
+}
+
 /** Ranks a name lower when it has a generation suffix the query didn't ask for. */
 function generationPenalty(index: Prepared, i: number, queryTokens: string[]): number {
   const unasked = tokenize(index.entries[i][1]).some((token) => GENERATION.test(token) && !queryTokens.includes(token));
@@ -236,20 +264,11 @@ export function searchWithTotal(
 ): { results: Result[]; total: number; similar: boolean } {
   if (!normalize(query)) return { results: [], total: 0, similar: false };
   const queryTokens = tokenize(query);
-  const pal = withoutPal(query);
 
-  const scores = directPass(index, query);
-  // A PAL sale name also finds the P-less device ID: "IPC-HDW5830RP-Z" finds "IPC-HDW5830R-Z", not only "...RP-Z-S2".
-  if (pal) {
-    for (const [i, score] of directPass(index, pal)) {
-      scores.set(i, Math.max(scores.get(i) ?? -Infinity, score - PAL_PENALTY));
-    }
-  }
-  // Nothing matched as typed: try token by token. Only then, so a query that already finds its model
-  // ("DH-XVR51") isn't flooded with every model that merely shares part of it.
-  if (scores.size === 0) {
-    for (const [i, score] of tokenPass(index, query)) scores.set(i, score);
-  }
+  let scores = exactScores(index, query);
+  // Lens codes sit in names too ("SD2A200-0280-A"), so they're only dropped once the query as typed finds nothing.
+  const bare = withoutLens(query);
+  if (scores.size === 0 && bare) scores = exactScores(index, bare);
   let similar = false;
   if (scores.size === 0) {
     for (const [i, score] of similarPass(index, query)) scores.set(i, score);
