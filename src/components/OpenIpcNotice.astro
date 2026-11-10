@@ -1,12 +1,17 @@
 ---
+interface Props {
+  placement: "firmware page" | "device page";
+}
+
+const { placement } = Astro.props;
 ---
 
 <aside class="rounded-xl border border-accent/40 bg-accent-soft px-4 py-3 text-sm" role="note">
   <p class="font-semibold text-accent">Keep your camera supported after the vendor stops</p>
   <p class="mt-1 text-fg/90">
-    <a href="https://openipc.org/get-started" rel="noopener">OpenIPC</a> is a community project that builds new open
+    <a href="https://openipc.org/get-started" data-openipc="get_started" data-placement={placement} rel="noopener">OpenIPC</a> is a community project that builds new open
     firmware for a wide variety of IP cameras, long after manufacturers stop updating them. They'd love help with
     data on more cameras. Even if yours isn't supported yet, a{" "}
-    <a href="https://openipc.org/cameras/report" rel="noopener">camera data report</a> helps them add support for it.
+    <a href="https://openipc.org/cameras/report" data-openipc="report" data-placement={placement} rel="noopener">camera data report</a> helps them add support for it.
   </p>
 </aside>

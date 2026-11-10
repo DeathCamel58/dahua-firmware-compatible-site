@@ -12,6 +12,7 @@
  *                      placement (header|home|search page|404|listing; kept apart from the download values)
  *   select_content     content_type (device|model|firmware|chip), item_id, search_term
  *   search_no_results  search_term
+ *   openipc_click      openipc_link (get_started|report), placement (firmware page|device page), link_domain
  *   copy               copied_content (a label such as device_name or magicbox_url, never the copied text)
  */
 
@@ -79,18 +80,25 @@ export function trackSearch(searchTerm: string, resultsCount: number, placement:
 /**
  * Clicks that leave the page or copy something. One listener for the whole page:
  *  - <a data-download="filename" data-source="archive|wayback|vendor" data-placement="…"> -> firmware_download
+ *  - OpenIPC notice links (<a data-openipc="get_started|report" data-placement="…">) -> openipc_click
  *  - search result rows (<a data-result-type data-result-name data-search-term>) -> select_content
  */
 export function initClickTracking() {
   const onClick = (event: MouseEvent) => {
     // Left click and middle click (open in new tab) both count; right click doesn't.
     if (event.type === "auxclick" && event.button !== 1) return;
-    const link = (event.target as Element).closest<HTMLAnchorElement>("a[data-download], a[data-result-name]");
+    const link = (event.target as Element).closest<HTMLAnchorElement>("a[data-download], a[data-openipc], a[data-result-name]");
     if (!link) return;
     if (link.dataset.download) {
       track("firmware_download", {
         firmware: link.dataset.download,
         download_source: link.dataset.source,
+        placement: link.dataset.placement,
+        link_domain: link.hostname,
+      });
+    } else if (link.dataset.openipc) {
+      track("openipc_click", {
+        openipc_link: link.dataset.openipc,
         placement: link.dataset.placement,
         link_domain: link.hostname,
       });
